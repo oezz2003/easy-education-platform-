@@ -33,6 +33,7 @@ export default function Footer() {
             <motion.img
                 src="/ASSITS/CLOUD.png"
                 alt=""
+                loading="lazy"
                 animate={{ x: [0, 5, 0] }}
                 transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
                 className="absolute left-0 top-0 w-[200px] opacity-20 pointer-events-none"
@@ -40,6 +41,7 @@ export default function Footer() {
             <motion.img
                 src="/ASSITS/CLOUD.png"
                 alt=""
+                loading="lazy"
                 animate={{ x: [0, -5, 0] }}
                 transition={{ duration: 7, repeat: Infinity, ease: 'easeInOut' }}
                 className="absolute right-0 top-10 w-[180px] opacity-15 pointer-events-none scale-x-[-1]"
@@ -47,11 +49,13 @@ export default function Footer() {
             <motion.img
                 src="/ASSITS/TREE.png"
                 alt=""
+                loading="lazy"
                 className="absolute left-[5%] bottom-0 w-[80px] opacity-30 pointer-events-none"
             />
             <motion.img
                 src="/ASSITS/TREE.png"
                 alt=""
+                loading="lazy"
                 className="absolute right-[8%] bottom-0 w-[60px] opacity-25 pointer-events-none scale-x-[-1]"
             />
 
@@ -94,6 +98,7 @@ export default function Footer() {
                             <img
                                 src="/main logo.png"
                                 alt="Easy Education Logo"
+                                loading="lazy"
                                 className="h-14 w-auto brightness-0 invert"
                             />
                         </Link>

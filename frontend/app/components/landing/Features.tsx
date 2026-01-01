@@ -68,6 +68,7 @@ export default function Features() {
             <motion.img
                 src="/ASSITS/CLOUD.png"
                 alt=""
+                loading="lazy"
                 animate={{ y: [0, -10, 0] }}
                 transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
                 className="absolute left-0 top-20 w-[200px] opacity-20 pointer-events-none"
@@ -75,6 +76,7 @@ export default function Features() {
             <motion.img
                 src="/ASSITS/CLOUD.png"
                 alt=""
+                loading="lazy"
                 animate={{ y: [0, 10, 0] }}
                 transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
                 className="absolute right-0 bottom-20 w-[250px] opacity-15 pointer-events-none scale-x-[-1]"
@@ -141,6 +143,7 @@ export default function Features() {
                                         <img
                                             src={feature.icon}
                                             alt={feature.title}
+                                            loading="lazy"
                                             className="w-16 h-16 md:w-20 md:h-20 object-contain drop-shadow-xl"
                                         />
                                     </motion.div>

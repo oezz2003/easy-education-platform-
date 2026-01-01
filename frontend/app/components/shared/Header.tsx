@@ -37,6 +37,7 @@ export default function Header() {
                                 <img
                                     src="/main logo.png"
                                     alt="Easy Education Logo"
+                                    loading="lazy"
                                     className="h-12 w-auto"
                                 />
                             </Link>
@@ -69,12 +70,16 @@ export default function Header() {
                             transition={{ duration: 0.5, delay: 0.2 }}
                             className="hidden md:flex items-center gap-3 px-4 py-2 bg-white rounded-3xl border-b-4 border-gray-200 shadow-sm"
                         >
-                            <button className="px-5 py-2.5 rounded-2xl font-semibold text-gray-700 hover:text-gray-900 hover:bg-gray-100 transition-all duration-300">
-                                Login
-                            </button>
-                            <button className="px-5 py-2.5 rounded-2xl font-bold text-white gradient-brand border-b-4 border-[var(--color-primary-700)] hover:brightness-110 shadow-md hover:shadow-lg transition-all duration-300 active:translate-y-0.5 active:border-b-2">
-                                Sign Up
-                            </button>
+                            <Link href="/login">
+                                <button className="px-5 py-2.5 rounded-2xl font-semibold text-gray-700 hover:text-gray-900 hover:bg-gray-100 transition-all duration-300">
+                                    Login
+                                </button>
+                            </Link>
+                            <Link href="/signup">
+                                <button className="px-5 py-2.5 rounded-2xl font-bold text-white gradient-brand border-b-4 border-[var(--color-primary-700)] hover:brightness-110 shadow-md hover:shadow-lg transition-all duration-300 active:translate-y-0.5 active:border-b-2">
+                                    Sign Up
+                                </button>
+                            </Link>
                         </motion.div>
 
                         {/* Mobile Menu Button */}
@@ -139,12 +144,16 @@ export default function Header() {
                                     transition={{ delay: 0.3 }}
                                     className="flex flex-col gap-3"
                                 >
-                                    <button className="w-full px-5 py-3 rounded-2xl font-semibold text-gray-700 border-2 border-gray-200 hover:border-[var(--color-primary-500)] transition-all duration-300">
-                                        Login
-                                    </button>
-                                    <button className="w-full px-5 py-3 rounded-2xl font-bold text-white gradient-brand border-b-4 border-[var(--color-primary-700)] shadow-md active:translate-y-0.5 active:border-b-2 transition-all duration-300">
-                                        Sign Up
-                                    </button>
+                                    <Link href="/login" onClick={() => setIsMobileMenuOpen(false)}>
+                                        <button className="w-full px-5 py-3 rounded-2xl font-semibold text-gray-700 border-2 border-gray-200 hover:border-[var(--color-primary-500)] transition-all duration-300">
+                                            Login
+                                        </button>
+                                    </Link>
+                                    <Link href="/signup" onClick={() => setIsMobileMenuOpen(false)}>
+                                        <button className="w-full px-5 py-3 rounded-2xl font-bold text-white gradient-brand border-b-4 border-[var(--color-primary-700)] shadow-md active:translate-y-0.5 active:border-b-2 transition-all duration-300">
+                                            Sign Up
+                                        </button>
+                                    </Link>
                                 </motion.div>
                             </div>
                         </motion.nav>

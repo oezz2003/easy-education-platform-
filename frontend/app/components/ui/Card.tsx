@@ -74,6 +74,7 @@ export function CardImage({ src, alt, className }: CardImageProps) {
             <img
                 src={src}
                 alt={alt}
+                loading="lazy"
                 className="w-full h-48 object-cover transition-transform duration-300 hover:scale-105"
             />
         </div>

@@ -62,6 +62,7 @@ export default function TeacherProfilePage() {
                                 <img
                                     src={teacher.avatar}
                                     alt={teacher.name}
+                                    loading="lazy"
                                     className="w-full h-full object-cover"
                                 />
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
@@ -148,6 +149,7 @@ export default function TeacherProfilePage() {
                                     <img
                                         src={teacher.avatar}
                                         alt="Video thumbnail"
+                                        loading="lazy"
                                         className="w-full h-full object-cover"
                                     />
                                     <div className="absolute inset-0 bg-black/40 flex items-center justify-center group-hover:bg-black/50 transition-colors">
@@ -180,6 +182,7 @@ export default function TeacherProfilePage() {
                                                 <img
                                                     src={course.thumbnail}
                                                     alt={course.title}
+                                                    loading="lazy"
                                                     className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                                                 />
                                             </div>

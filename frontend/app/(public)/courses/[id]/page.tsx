@@ -104,6 +104,7 @@ export default function CourseDetailsPage() {
             <motion.img
                 src="/ASSITS/CLOUD.png"
                 alt=""
+                loading="lazy"
                 animate={{ y: [0, -10, 0] }}
                 transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
                 className="absolute left-0 top-20 w-[250px] opacity-30 pointer-events-none"
@@ -111,6 +112,7 @@ export default function CourseDetailsPage() {
             <motion.img
                 src="/ASSITS/CLOUD.png"
                 alt=""
+                loading="lazy"
                 animate={{ y: [0, 10, 0] }}
                 transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
                 className="absolute right-0 top-60 w-[200px] opacity-20 pointer-events-none scale-x-[-1]"
@@ -151,6 +153,7 @@ export default function CourseDetailsPage() {
                                     <img
                                         src={course.subjectIcon}
                                         alt={course.subject}
+                                        loading="lazy"
                                         className="w-full h-full object-contain drop-shadow-2xl"
                                     />
                                 </motion.div>
@@ -169,6 +172,7 @@ export default function CourseDetailsPage() {
                                             <img
                                                 src={course.teacher.avatar}
                                                 alt={course.teacher.name}
+                                                loading="lazy"
                                                 className="w-10 h-10 rounded-full object-cover"
                                             />
                                             <div>
@@ -197,7 +201,7 @@ export default function CourseDetailsPage() {
                                 animate={{ y: [0, -5, 0] }}
                                 transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
                             >
-                                <img src="/ASSITS/watch.png" alt="Duration" className="w-12 h-12 object-contain" />
+                                <img src="/ASSITS/watch.png" alt="Duration" loading="lazy" className="w-12 h-12 object-contain" />
                             </motion.div>
                             <div>
                                 <p className="text-sm text-gray-500">Duration</p>
@@ -211,7 +215,7 @@ export default function CourseDetailsPage() {
                                 animate={{ y: [0, -5, 0] }}
                                 transition={{ duration: 3.5, repeat: Infinity, ease: 'easeInOut' }}
                             >
-                                <img src="/ASSITS/cup.png" alt="Level" className="w-12 h-12 object-contain" />
+                                <img src="/ASSITS/cup.png" alt="Level" loading="lazy" className="w-12 h-12 object-contain" />
                             </motion.div>
                             <div>
                                 <p className="text-sm text-gray-500">Difficulty</p>
@@ -225,7 +229,7 @@ export default function CourseDetailsPage() {
                                 animate={{ y: [0, -5, 0] }}
                                 transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
                             >
-                                <img src="/ASSITS/folders.png" alt="Resources" className="w-12 h-12 object-contain" />
+                                <img src="/ASSITS/folders.png" alt="Resources" loading="lazy" className="w-12 h-12 object-contain" />
                             </motion.div>
                             <div>
                                 <p className="text-sm text-gray-500">Resources</p>
@@ -359,6 +363,7 @@ export default function CourseDetailsPage() {
                                     <img
                                         src="https://images.unsplash.com/photo-1509228468518-180dd4864904?w=800"
                                         alt="Course preview"
+                                        loading="lazy"
                                         className="w-full h-full object-cover opacity-50"
                                     />
                                 </div>
@@ -391,7 +396,7 @@ export default function CourseDetailsPage() {
                                                 animate={{ y: [0, -3, 0] }}
                                                 transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
                                             >
-                                                <img src="/ASSITS/lock.png" alt="Secure" className="w-8 h-8 object-contain" />
+                                                <img src="/ASSITS/lock.png" alt="Secure" loading="lazy" className="w-8 h-8 object-contain" />
                                             </motion.div>
                                             <span>30-day money-back guarantee</span>
                                         </div>

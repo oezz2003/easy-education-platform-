@@ -125,6 +125,7 @@ export default function CoursesPage() {
             <motion.img
                 src="/ASSITS/CLOUD.png"
                 alt=""
+                loading="lazy"
                 animate={{ y: [0, -10, 0] }}
                 transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
                 className="absolute left-0 top-20 w-[250px] opacity-30 pointer-events-none"
@@ -132,6 +133,7 @@ export default function CoursesPage() {
             <motion.img
                 src="/ASSITS/CLOUD.png"
                 alt=""
+                loading="lazy"
                 animate={{ y: [0, 10, 0] }}
                 transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
                 className="absolute right-0 top-40 w-[200px] opacity-20 pointer-events-none scale-x-[-1]"
@@ -139,11 +141,13 @@ export default function CoursesPage() {
             <motion.img
                 src="/ASSITS/TREE.png"
                 alt=""
+                loading="lazy"
                 className="absolute left-[3%] bottom-0 w-[100px] opacity-40 pointer-events-none"
             />
             <motion.img
                 src="/ASSITS/TREE.png"
                 alt=""
+                loading="lazy"
                 className="absolute right-[5%] bottom-0 w-[80px] opacity-30 pointer-events-none scale-x-[-1]"
             />
 
@@ -151,6 +155,7 @@ export default function CoursesPage() {
             <motion.img
                 src="/ASSITS/play.png"
                 alt=""
+                loading="lazy"
                 animate={{ y: [0, -12, 0], rotate: [0, 5, 0] }}
                 transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
                 className="absolute top-[15%] right-[10%] w-16 opacity-60 pointer-events-none hidden lg:block"
@@ -290,6 +295,7 @@ export default function CoursesPage() {
                                         <img
                                             src={course.subjectIcon}
                                             alt={course.subject}
+                                            loading="lazy"
                                             className="w-full h-full object-contain drop-shadow-xl"
                                         />
                                     </motion.div>
@@ -302,6 +308,7 @@ export default function CoursesPage() {
                                         <img
                                             src={course.thumbnail}
                                             alt={course.title}
+                                            loading="lazy"
                                             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                                         />
                                         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
@@ -360,6 +367,7 @@ export default function CoursesPage() {
                                                 <img
                                                     src={course.teacher.avatar}
                                                     alt={course.teacher.name}
+                                                    loading="lazy"
                                                     className="w-8 h-8 rounded-full object-cover"
                                                 />
                                                 <span className="text-sm text-gray-600">{course.teacher.name}</span>
@@ -386,6 +394,7 @@ export default function CoursesPage() {
                         <motion.img
                             src="/ASSITS/folders.png"
                             alt=""
+                            loading="lazy"
                             animate={{ y: [0, -10, 0] }}
                             transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
                             className="w-24 h-24 mx-auto mb-4 opacity-50"

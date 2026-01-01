@@ -43,24 +43,28 @@ export default function FeaturedTeachers() {
                 <motion.img
                     src="/ASSITS/CLOUD.png"
                     alt=""
+                    loading="lazy"
                     style={{ y: cloudY }}
                     className="absolute left-[10%] top-10 w-[200px] opacity-20 pointer-events-none"
                 />
                 <motion.img
                     src="/ASSITS/CLOUD.png"
                     alt=""
+                    loading="lazy"
                     style={{ y: cloudY }}
                     className="absolute right-[5%] top-20 w-[250px] opacity-15 pointer-events-none scale-x-[-1]"
                 />
                 <motion.img
                     src="/ASSITS/TREE.png"
                     alt=""
+                    loading="lazy"
                     style={{ y: treeY }}
                     className="absolute left-0 bottom-0 w-[120px] opacity-30 pointer-events-none"
                 />
                 <motion.img
                     src="/ASSITS/TREE.png"
                     alt=""
+                    loading="lazy"
                     style={{ y: treeY }}
                     className="absolute right-0 bottom-0 w-[100px] opacity-25 pointer-events-none scale-x-[-1]"
                 />

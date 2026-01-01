@@ -46,6 +46,7 @@ export default function LevelsPage() {
             <motion.img
                 src="/ASSITS/CLOUD.png"
                 alt=""
+                loading="lazy"
                 animate={{ y: [0, -10, 0] }}
                 transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
                 className="absolute left-0 top-20 w-[250px] opacity-30 pointer-events-none"
@@ -53,6 +54,7 @@ export default function LevelsPage() {
             <motion.img
                 src="/ASSITS/CLOUD.png"
                 alt=""
+                loading="lazy"
                 animate={{ y: [0, 10, 0] }}
                 transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
                 className="absolute right-0 top-40 w-[200px] opacity-20 pointer-events-none scale-x-[-1]"
@@ -60,11 +62,13 @@ export default function LevelsPage() {
             <motion.img
                 src="/ASSITS/TREE.png"
                 alt=""
+                loading="lazy"
                 className="absolute left-[3%] bottom-0 w-[100px] opacity-40 pointer-events-none"
             />
             <motion.img
                 src="/ASSITS/TREE.png"
                 alt=""
+                loading="lazy"
                 className="absolute right-[5%] bottom-0 w-[80px] opacity-30 pointer-events-none scale-x-[-1]"
             />
 
@@ -107,8 +111,8 @@ export default function LevelsPage() {
                                 transition={{ delay: 0.1 * index, duration: 0.5 }}
                                 whileHover={{ y: -10, scale: 1.02 }}
                                 className={`relative p-8 rounded-3xl border-2 transition-all duration-300 text-left ${selectedLevel === level.id
-                                        ? `${colors.border} ${colors.bg} shadow-2xl ring-4 ring-[var(--color-accent-500)]`
-                                        : `border-gray-200 bg-white hover:${colors.border} hover:shadow-xl`
+                                    ? `${colors.border} ${colors.bg} shadow-2xl ring-4 ring-[var(--color-accent-500)]`
+                                    : `border-gray-200 bg-white hover:${colors.border} hover:shadow-xl`
                                     }`}
                             >
                                 {/* Cloud shadow beneath */}
@@ -131,6 +135,7 @@ export default function LevelsPage() {
                                     <img
                                         src={icon}
                                         alt={level.name}
+                                        loading="lazy"
                                         className="w-full h-full object-contain drop-shadow-xl"
                                     />
                                 </motion.div>
@@ -202,6 +207,7 @@ export default function LevelsPage() {
                                                 <img
                                                     src={icon}
                                                     alt={subject.name}
+                                                    loading="lazy"
                                                     className="w-full h-full object-contain drop-shadow-lg"
                                                 />
                                             </motion.div>
