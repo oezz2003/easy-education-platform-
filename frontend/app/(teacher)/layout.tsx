@@ -2,10 +2,10 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import AdminSidebar from '../components/admin/Sidebar';
-import AdminHeader from '../components/admin/AdminHeader';
+import TeacherSidebar from '../components/teacher/TeacherSidebar';
+import TeacherHeader from '../components/teacher/TeacherHeader';
 
-export default function AdminLayout({
+export default function TeacherLayout({
     children,
 }: {
     children: React.ReactNode;
@@ -17,7 +17,7 @@ export default function AdminLayout({
         <div className="min-h-screen bg-[#F8FAFC]">
             {/* Sidebar - Desktop */}
             <div className="hidden lg:block">
-                <AdminSidebar
+                <TeacherSidebar
                     isCollapsed={sidebarCollapsed}
                     onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
                 />
@@ -41,7 +41,7 @@ export default function AdminLayout({
                             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
                             className="fixed left-0 top-0 z-50 lg:hidden"
                         >
-                            <AdminSidebar
+                            <TeacherSidebar
                                 isCollapsed={false}
                                 onToggle={() => setMobileMenuOpen(false)}
                             />
@@ -59,7 +59,7 @@ export default function AdminLayout({
                 transition={{ duration: 0.3, ease: 'easeInOut' }}
                 className="min-h-screen transition-all hidden lg:block"
             >
-                <AdminHeader onMenuClick={() => setMobileMenuOpen(true)} />
+                <TeacherHeader onMenuClick={() => setMobileMenuOpen(true)} />
 
                 {/* Content Area */}
                 <motion.div
@@ -74,7 +74,7 @@ export default function AdminLayout({
 
             {/* Mobile Content */}
             <main className="min-h-screen lg:hidden">
-                <AdminHeader onMenuClick={() => setMobileMenuOpen(true)} />
+                <TeacherHeader onMenuClick={() => setMobileMenuOpen(true)} />
 
                 {/* Content Area */}
                 <motion.div

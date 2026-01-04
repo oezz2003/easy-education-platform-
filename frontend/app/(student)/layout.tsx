@@ -2,10 +2,10 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import AdminSidebar from '../components/admin/Sidebar';
-import AdminHeader from '../components/admin/AdminHeader';
+import StudentSidebar from '../components/student/StudentSidebar';
+import StudentHeader from '../components/student/StudentHeader';
 
-export default function AdminLayout({
+export default function StudentLayout({
     children,
 }: {
     children: React.ReactNode;
@@ -14,10 +14,10 @@ export default function AdminLayout({
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
     return (
-        <div className="min-h-screen bg-[#F8FAFC]">
+        <div className="min-h-screen bg-gradient-to-br from-emerald-50/30 via-white to-green-50/20">
             {/* Sidebar - Desktop */}
             <div className="hidden lg:block">
-                <AdminSidebar
+                <StudentSidebar
                     isCollapsed={sidebarCollapsed}
                     onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
                 />
@@ -41,7 +41,7 @@ export default function AdminLayout({
                             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
                             className="fixed left-0 top-0 z-50 lg:hidden"
                         >
-                            <AdminSidebar
+                            <StudentSidebar
                                 isCollapsed={false}
                                 onToggle={() => setMobileMenuOpen(false)}
                             />
@@ -59,7 +59,7 @@ export default function AdminLayout({
                 transition={{ duration: 0.3, ease: 'easeInOut' }}
                 className="min-h-screen transition-all hidden lg:block"
             >
-                <AdminHeader onMenuClick={() => setMobileMenuOpen(true)} />
+                <StudentHeader onMenuClick={() => setMobileMenuOpen(true)} />
 
                 {/* Content Area */}
                 <motion.div
@@ -74,7 +74,7 @@ export default function AdminLayout({
 
             {/* Mobile Content */}
             <main className="min-h-screen lg:hidden">
-                <AdminHeader onMenuClick={() => setMobileMenuOpen(true)} />
+                <StudentHeader onMenuClick={() => setMobileMenuOpen(true)} />
 
                 {/* Content Area */}
                 <motion.div

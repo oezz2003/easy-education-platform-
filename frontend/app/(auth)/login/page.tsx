@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Eye, EyeOff, ArrowRight, Sparkles, Mail, Lock } from 'lucide-react';
 import Link from 'next/link';
@@ -57,6 +58,7 @@ const roleConfigs = {
 };
 
 export default function LoginPage() {
+    const router = useRouter();
     const [role, setRole] = useState<UserRole>('student');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -70,15 +72,23 @@ export default function LoginPage() {
     const isValidPassword = password.length >= 6;
     const canSubmit = isValidEmail && isValidPassword;
 
+    // Role-based dashboard routes
+    const dashboardRoutes: Record<UserRole, string> = {
+        student: '/student/dashboard',
+        teacher: '/teacher/dashboard',
+        admin: '/admin/dashboard',
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!canSubmit) return;
 
         setIsSubmitting(true);
-        // Simulate API call
+        // Simulate API call for login
         await new Promise((resolve) => setTimeout(resolve, 1500));
-        setIsSubmitting(false);
-        // Redirect based on role would happen here
+
+        // Redirect to appropriate dashboard based on selected role
+        router.push(dashboardRoutes[role]);
     };
 
     return (

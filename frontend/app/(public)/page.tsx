@@ -5,13 +5,13 @@ import Features from "@/app/components/landing/Features";
 import CallToAction from "@/app/components/landing/CallToAction";
 
 export default function Home() {
-  return (
-    <>
-      <Hero />
-      <LevelsShowcase />
-      <FeaturedTeachers />
-      <Features />
-      <CallToAction />
-    </>
-  );
+    return (
+        <>
+            <Hero />
+            <LevelsShowcase />
+            <FeaturedTeachers />
+            <Features />
+            <CallToAction />
+        </>
+    );
 }
