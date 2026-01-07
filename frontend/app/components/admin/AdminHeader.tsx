@@ -2,14 +2,14 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Search, Plus, Bell, ChevronDown, Menu } from 'lucide-react';
+import { Plus, Bell, ChevronDown, Menu } from 'lucide-react';
+import SearchBar from '../shared/SearchBar';
 
 interface AdminHeaderProps {
     onMenuClick: () => void;
 }
 
 export default function AdminHeader({ onMenuClick }: AdminHeaderProps) {
-    const [searchQuery, setSearchQuery] = useState('');
     const [showNotifications, setShowNotifications] = useState(false);
     const [showProfile, setShowProfile] = useState(false);
 
@@ -30,15 +30,8 @@ export default function AdminHeader({ onMenuClick }: AdminHeaderProps) {
                 </button>
 
                 {/* Search Bar */}
-                <div className="flex-1 relative max-w-xl">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                    <input
-                        type="text"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder="Search for students, teachers, or courses..."
-                        className="w-full pl-12 pr-4 py-2.5 sm:py-3 rounded-full bg-gray-50 border-2 border-transparent text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[var(--color-primary-300)] focus:bg-white transition-all text-sm"
-                    />
+                <div className="hidden sm:block flex-1 max-w-xl">
+                    <SearchBar variant="admin" />
                 </div>
 
                 {/* Quick Actions */}

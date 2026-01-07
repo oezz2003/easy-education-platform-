@@ -12,6 +12,7 @@ const navLinks = [
     { href: '/levels', label: 'Levels' },
     { href: '/courses', label: 'Courses' },
     { href: '/teachers', label: 'Teachers' },
+    { href: '/book-free-session', label: 'Book Free Session' },
 ];
 
 export default function Header() {

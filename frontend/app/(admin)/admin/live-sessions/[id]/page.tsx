@@ -1,343 +1,418 @@
 'use client';
 
 import { useState } from 'react';
-import { useParams } from 'next/navigation';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import {
-    ArrowLeft,
-    Video,
-    Calendar,
-    Clock,
     Users,
-    Play,
-    ExternalLink,
-    Copy,
-    Check,
-    Radio,
+    CheckCircle,
+    XCircle,
+    Clock,
+    Calendar,
+    Video,
+    Search,
+    Filter,
+    Download,
+    ChevronDown,
+    Eye,
     UserCheck,
     UserX,
-    MessageSquare,
-    Download,
-    Share2,
-    Edit,
-    Trash2
+    BarChart3,
+    TrendingUp,
+    AlertCircle
 } from 'lucide-react';
 
-// Mock session data
-const mockSession = {
-    id: '1',
-    title: 'Advanced Algebra Live Class',
-    description: 'In this session, we will cover advanced algebra topics including quadratic equations and factoring methods.',
-    course: { id: '1', title: 'Advanced Mathematics', thumbnail: 'https://images.unsplash.com/photo-1509228468518-180dd4864904?w=800' },
-    teacher: { id: '1', name: 'Ahmed Hassan', avatar: 'https://i.pravatar.cc/150?img=11', subject: 'Mathematics' },
-    scheduledAt: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-    duration: 90,
-    meetLink: 'https://meet.google.com/abc-defg-hij',
-    status: 'live',
-    attendees: [
-        { id: '1', name: 'Omar Khaled', avatar: 'https://i.pravatar.cc/150?img=12', status: 'joined', joinedAt: '10:05 AM' },
-        { id: '2', name: 'Fatma Nour', avatar: 'https://i.pravatar.cc/150?img=9', status: 'joined', joinedAt: '10:02 AM' },
-        { id: '3', name: 'Youssef Ibrahim', avatar: 'https://i.pravatar.cc/150?img=15', status: 'joined', joinedAt: '10:08 AM' },
-        { id: '4', name: 'Laila Hassan', avatar: 'https://i.pravatar.cc/150?img=20', status: 'absent' },
-        { id: '5', name: 'Ali Mohamed', avatar: 'https://i.pravatar.cc/150?img=33', status: 'joined', joinedAt: '10:15 AM' },
-    ],
-    maxAttendees: 100,
-    recordingUrl: null,
-};
+// Types
+interface Attendee {
+    id: string;
+    name: string;
+    avatar: string;
+    email: string;
+    joinedAt: string | null;
+    leftAt: string | null;
+    duration: number; // minutes attended
+    status: 'present' | 'absent' | 'late' | 'left-early';
+    participation: number; // 0-100
+}
+
+interface Session {
+    id: string;
+    title: string;
+    teacherName: string;
+    teacherAvatar: string;
+    courseName: string;
+    date: Date;
+    startTime: string;
+    endTime: string;
+    duration: number;
+    status: 'scheduled' | 'live' | 'completed';
+    totalEnrolled: number;
+    attendees: Attendee[];
+}
+
+// Mock data
+const sessionsData: Session[] = [
+    {
+        id: '1',
+        title: 'Algebra Fundamentals - Live',
+        teacherName: 'Ahmed Hassan',
+        teacherAvatar: 'https://i.pravatar.cc/150?img=11',
+        courseName: 'Advanced Mathematics',
+        date: new Date(2026, 0, 7),
+        startTime: '09:00',
+        endTime: '10:30',
+        duration: 90,
+        status: 'live',
+        totalEnrolled: 30,
+        attendees: [
+            { id: '1', name: 'Omar Khaled', avatar: 'https://i.pravatar.cc/150?img=1', email: 'omar@edu.com', joinedAt: '09:00', leftAt: null, duration: 45, status: 'present', participation: 85 },
+            { id: '2', name: 'Fatma Ahmed', avatar: 'https://i.pravatar.cc/150?img=2', email: 'fatma@edu.com', joinedAt: '09:05', leftAt: null, duration: 40, status: 'late', participation: 70 },
+            { id: '3', name: 'Youssef Ibrahim', avatar: 'https://i.pravatar.cc/150?img=3', email: 'youssef@edu.com', joinedAt: '09:00', leftAt: null, duration: 45, status: 'present', participation: 92 },
+            { id: '4', name: 'Sara Mohamed', avatar: 'https://i.pravatar.cc/150?img=4', email: 'sara@edu.com', joinedAt: '09:02', leftAt: '09:30', duration: 28, status: 'left-early', participation: 45 },
+            { id: '5', name: 'Ali Hassan', avatar: 'https://i.pravatar.cc/150?img=5', email: 'ali@edu.com', joinedAt: null, leftAt: null, duration: 0, status: 'absent', participation: 0 },
+            { id: '6', name: 'Laila Nour', avatar: 'https://i.pravatar.cc/150?img=6', email: 'laila@edu.com', joinedAt: '09:00', leftAt: null, duration: 45, status: 'present', participation: 88 },
+        ],
+    },
+    {
+        id: '2',
+        title: 'Physics Lab Practice',
+        teacherName: 'Sara Ali',
+        teacherAvatar: 'https://i.pravatar.cc/150?img=5',
+        courseName: 'Physics Fundamentals',
+        date: new Date(2026, 0, 6),
+        startTime: '14:00',
+        endTime: '15:30',
+        duration: 90,
+        status: 'completed',
+        totalEnrolled: 25,
+        attendees: [
+            { id: '1', name: 'Mohamed Farid', avatar: 'https://i.pravatar.cc/150?img=7', email: 'mohamed@edu.com', joinedAt: '14:00', leftAt: '15:30', duration: 90, status: 'present', participation: 95 },
+            { id: '2', name: 'Nadia Karim', avatar: 'https://i.pravatar.cc/150?img=8', email: 'nadia@edu.com', joinedAt: '14:00', leftAt: '15:30', duration: 90, status: 'present', participation: 88 },
+            { id: '3', name: 'Khaled Salem', avatar: 'https://i.pravatar.cc/150?img=9', email: 'khaled@edu.com', joinedAt: '14:15', leftAt: '15:30', duration: 75, status: 'late', participation: 72 },
+        ],
+    },
+];
 
 const statusConfig = {
-    live: { label: 'Live Now', color: 'red', bg: 'bg-red-500', pulse: true },
-    upcoming: { label: 'Upcoming', color: 'blue', bg: 'bg-blue-500', pulse: false },
-    completed: { label: 'Completed', color: 'emerald', bg: 'bg-emerald-500', pulse: false },
+    present: { label: 'Present', color: 'emerald', icon: CheckCircle },
+    absent: { label: 'Absent', color: 'red', icon: XCircle },
+    late: { label: 'Late', color: 'amber', icon: Clock },
+    'left-early': { label: 'Left Early', color: 'orange', icon: AlertCircle },
 };
 
-export default function SessionDetailsPage() {
-    const params = useParams();
-    const [copied, setCopied] = useState(false);
+export default function AttendancePage() {
+    const [selectedSession, setSelectedSession] = useState<Session | null>(sessionsData[0]);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [filterStatus, setFilterStatus] = useState<string>('all');
+    const [showDetails, setShowDetails] = useState<string | null>(null);
 
-    const session = mockSession;
-    const status = statusConfig[session.status as keyof typeof statusConfig];
-    const joinedAttendees = session.attendees.filter(a => a.status === 'joined');
-    const absentAttendees = session.attendees.filter(a => a.status === 'absent');
+    // Calculate stats
+    const getSessionStats = (session: Session) => {
+        const present = session.attendees.filter(a => a.status === 'present').length;
+        const late = session.attendees.filter(a => a.status === 'late').length;
+        const absent = session.attendees.filter(a => a.status === 'absent').length;
+        const leftEarly = session.attendees.filter(a => a.status === 'left-early').length;
+        const attendanceRate = Math.round(((present + late + leftEarly) / session.totalEnrolled) * 100);
+        const avgParticipation = Math.round(session.attendees.reduce((acc, a) => acc + a.participation, 0) / session.attendees.length);
+        return { present, late, absent, leftEarly, attendanceRate, avgParticipation };
+    };
 
-    const copyLink = () => {
-        navigator.clipboard.writeText(session.meetLink);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
+    const filteredAttendees = selectedSession?.attendees.filter(a => {
+        const matchesSearch = a.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            a.email.toLowerCase().includes(searchQuery.toLowerCase());
+        const matchesFilter = filterStatus === 'all' || a.status === filterStatus;
+        return matchesSearch && matchesFilter;
+    }) || [];
+
+    const stats = selectedSession ? getSessionStats(selectedSession) : null;
+
+    const markAttendance = (attendeeId: string, status: Attendee['status']) => {
+        if (!selectedSession) return;
+        const updatedAttendees = selectedSession.attendees.map(a =>
+            a.id === attendeeId ? { ...a, status, joinedAt: status !== 'absent' ? (a.joinedAt || new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })) : null } : a
+        );
+        setSelectedSession({ ...selectedSession, attendees: updatedAttendees });
     };
 
     return (
         <div className="space-y-6">
-            {/* Back Button */}
-            <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
-                <Link href="/admin/live-sessions" className="inline-flex items-center gap-2 text-gray-600 hover:text-red-500 transition-colors">
-                    <ArrowLeft className="w-5 h-5" />
-                    <span>Back to Live Sessions</span>
-                </Link>
+            {/* Header */}
+            <motion.div
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+            >
+                <div className="flex items-center gap-4">
+                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center shadow-lg">
+                        <UserCheck className="w-7 h-7 text-white" />
+                    </div>
+                    <div>
+                        <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Attendance Tracking</h1>
+                        <p className="text-gray-500 text-sm">Monitor session attendance and participation</p>
+                    </div>
+                </div>
+
+                <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="flex items-center gap-2 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-medium transition-colors"
+                >
+                    <Download className="w-4 h-4" />
+                    Export Report
+                </motion.button>
             </motion.div>
 
-            {/* Session Header */}
+            {/* Session Selector */}
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="bg-white rounded-3xl shadow-lg border border-gray-100 overflow-hidden"
+                transition={{ delay: 0.05 }}
+                className="flex gap-4 overflow-x-auto pb-2"
             >
-                <div className="relative h-56 md:h-72 overflow-hidden">
-                    <img src={session.course.thumbnail} alt="" className="w-full h-full object-cover" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-black/20" />
-
-                    {/* Status Badge */}
-                    <div className="absolute top-4 left-4">
-                        <span className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium text-white ${status.bg}`}>
-                            {status.pulse && <span className="w-2 h-2 rounded-full bg-white animate-pulse" />}
-                            {session.status === 'live' && <Radio className="w-4 h-4" />}
-                            {status.label}
-                        </span>
-                    </div>
-
-                    {/* Actions */}
-                    <div className="absolute top-4 right-4 flex gap-2">
-                        <button className="p-2 rounded-xl bg-white/20 backdrop-blur text-white hover:bg-white/30">
-                            <Edit className="w-5 h-5" />
-                        </button>
-                        <button className="p-2 rounded-xl bg-white/20 backdrop-blur text-white hover:bg-white/30">
-                            <Trash2 className="w-5 h-5" />
-                        </button>
-                    </div>
-
-                    {/* Content */}
-                    <div className="absolute bottom-0 left-0 right-0 p-6">
-                        <p className="text-white/80 text-sm mb-1">{session.course.title}</p>
-                        <h1 className="text-2xl md:text-3xl font-bold text-white mb-3">{session.title}</h1>
-                        <div className="flex flex-wrap items-center gap-4">
-                            <div className="flex items-center gap-2">
-                                <img src={session.teacher.avatar} alt="" className="w-8 h-8 rounded-full ring-2 ring-white" />
-                                <span className="text-white/90">{session.teacher.name}</span>
+                {sessionsData.map((session) => (
+                    <motion.button
+                        key={session.id}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => setSelectedSession(session)}
+                        className={`flex-shrink-0 p-4 rounded-2xl border-2 transition-all ${selectedSession?.id === session.id
+                                ? 'border-indigo-500 bg-indigo-50'
+                                : 'border-gray-200 bg-white hover:border-indigo-200'
+                            }`}
+                    >
+                        <div className="flex items-center gap-3">
+                            <img src={session.teacherAvatar} alt="" className="w-10 h-10 rounded-xl" />
+                            <div className="text-left">
+                                <p className="font-semibold text-gray-900 text-sm">{session.title}</p>
+                                <p className="text-xs text-gray-500">{session.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} • {session.startTime}</p>
                             </div>
-                            <div className="flex items-center gap-2 text-white/80">
-                                <Calendar className="w-4 h-4" />
-                                <span>{new Date(session.scheduledAt).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</span>
-                            </div>
-                            <div className="flex items-center gap-2 text-white/80">
-                                <Clock className="w-4 h-4" />
-                                <span>{new Date(session.scheduledAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })} • {session.duration}m</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Join Section */}
-                <div className="p-6 bg-gradient-to-r from-gray-50 to-white border-b border-gray-100">
-                    <div className="flex flex-col md:flex-row md:items-center gap-4">
-                        {/* Meet Link */}
-                        <div className="flex-1 flex items-center gap-3 p-4 bg-white rounded-xl border border-gray-200">
-                            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-green-400 to-blue-500 flex items-center justify-center">
-                                <Video className="w-5 h-5 text-white" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                                <p className="text-xs text-gray-500 font-medium">Google Meet Link</p>
-                                <p className="text-sm text-gray-900 font-mono truncate">{session.meetLink}</p>
-                            </div>
-                            <button
-                                onClick={copyLink}
-                                className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
-                            >
-                                {copied ? <Check className="w-5 h-5 text-green-500" /> : <Copy className="w-5 h-5 text-gray-400" />}
-                            </button>
-                        </div>
-
-                        {/* Action Buttons */}
-                        <div className="flex gap-3">
                             {session.status === 'live' && (
-                                <a
-                                    href={session.meetLink}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-red-500 to-pink-500 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all"
-                                >
-                                    <Play className="w-5 h-5" />
-                                    Join Now
-                                </a>
+                                <span className="flex items-center gap-1 px-2 py-0.5 bg-red-100 text-red-600 rounded-full text-xs font-medium">
+                                    <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
+                                    Live
+                                </span>
                             )}
-                            {session.status === 'upcoming' && (
-                                <a
-                                    href={session.meetLink}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="flex items-center gap-2 px-6 py-3 bg-blue-500 text-white rounded-xl font-semibold"
-                                >
-                                    <ExternalLink className="w-5 h-5" />
-                                    Open Link
-                                </a>
-                            )}
-                            <button className="p-3 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors">
-                                <Share2 className="w-5 h-5 text-gray-600" />
-                            </button>
                         </div>
-                    </div>
-                </div>
-
-                {/* Quick Stats */}
-                <div className="grid grid-cols-3 divide-x divide-gray-100">
-                    {[
-                        { label: 'Registered', value: session.attendees.length, icon: Users },
-                        { label: 'Attended', value: joinedAttendees.length, icon: UserCheck },
-                        { label: 'Duration', value: `${session.duration}m`, icon: Clock },
-                    ].map((stat) => (
-                        <div key={stat.label} className="p-4 text-center">
-                            <div className="flex items-center justify-center gap-2 text-gray-600 mb-1">
-                                <stat.icon className="w-4 h-4" />
-                                <span className="font-bold text-xl text-gray-900">{stat.value}</span>
-                            </div>
-                            <p className="text-xs text-gray-500">{stat.label}</p>
-                        </div>
-                    ))}
-                </div>
+                    </motion.button>
+                ))}
             </motion.div>
 
-            {/* Content Grid */}
-            <div className="grid lg:grid-cols-3 gap-6">
-                {/* Left Column */}
-                <div className="lg:col-span-2 space-y-6">
-                    {/* Description */}
+            {selectedSession && stats && (
+                <>
+                    {/* Stats Cards */}
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.1 }}
-                        className="bg-white rounded-2xl shadow-lg p-6"
+                        className="grid grid-cols-2 md:grid-cols-6 gap-4"
                     >
-                        <h2 className="text-lg font-bold text-gray-900 mb-3">About This Session</h2>
-                        <p className="text-gray-600 leading-relaxed">{session.description}</p>
-                    </motion.div>
-
-                    {/* Attendees */}
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.2 }}
-                        className="bg-white rounded-2xl shadow-lg p-6"
-                    >
-                        <div className="flex items-center justify-between mb-4">
-                            <h2 className="text-lg font-bold text-gray-900">Attendees</h2>
-                            <span className="text-sm text-gray-500">{joinedAttendees.length}/{session.attendees.length} joined</span>
-                        </div>
-
-                        {/* Joined */}
-                        <div className="mb-4">
-                            <p className="text-sm font-medium text-emerald-600 mb-3 flex items-center gap-2">
-                                <UserCheck className="w-4 h-4" />
-                                Joined ({joinedAttendees.length})
-                            </p>
-                            <div className="space-y-2">
-                                {joinedAttendees.map((attendee) => (
-                                    <div key={attendee.id} className="flex items-center gap-3 p-3 rounded-xl bg-emerald-50">
-                                        <img src={attendee.avatar} alt="" className="w-8 h-8 rounded-full" />
-                                        <div className="flex-1">
-                                            <p className="font-medium text-gray-900">{attendee.name}</p>
-                                            <p className="text-xs text-gray-500">Joined at {attendee.joinedAt}</p>
-                                        </div>
-                                        <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                        {[
+                            { label: 'Present', value: stats.present, color: 'emerald', icon: CheckCircle },
+                            { label: 'Late', value: stats.late, color: 'amber', icon: Clock },
+                            { label: 'Left Early', value: stats.leftEarly, color: 'orange', icon: AlertCircle },
+                            { label: 'Absent', value: stats.absent, color: 'red', icon: XCircle },
+                            { label: 'Attendance Rate', value: `${stats.attendanceRate}%`, color: 'blue', icon: BarChart3 },
+                            { label: 'Avg Participation', value: `${stats.avgParticipation}%`, color: 'purple', icon: TrendingUp },
+                        ].map((stat, idx) => (
+                            <div key={idx} className="bg-white rounded-2xl p-4 shadow-lg border border-gray-100">
+                                <div className="flex items-center gap-3">
+                                    <div className={`w-10 h-10 rounded-xl bg-${stat.color}-100 flex items-center justify-center`}>
+                                        <stat.icon className={`w-5 h-5 text-${stat.color}-500`} />
                                     </div>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* Absent */}
-                        {absentAttendees.length > 0 && (
-                            <div>
-                                <p className="text-sm font-medium text-gray-500 mb-3 flex items-center gap-2">
-                                    <UserX className="w-4 h-4" />
-                                    Absent ({absentAttendees.length})
-                                </p>
-                                <div className="space-y-2">
-                                    {absentAttendees.map((attendee) => (
-                                        <div key={attendee.id} className="flex items-center gap-3 p-3 rounded-xl bg-gray-50">
-                                            <img src={attendee.avatar} alt="" className="w-8 h-8 rounded-full opacity-60" />
-                                            <p className="font-medium text-gray-500">{attendee.name}</p>
-                                        </div>
-                                    ))}
+                                    <div>
+                                        <p className="text-xl font-bold text-gray-900">{stat.value}</p>
+                                        <p className="text-xs text-gray-500">{stat.label}</p>
+                                    </div>
                                 </div>
                             </div>
-                        )}
+                        ))}
                     </motion.div>
-                </div>
 
-                {/* Right Column */}
-                <div className="space-y-6">
-                    {/* Teacher Info */}
+                    {/* Filters */}
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.15 }}
-                        className="bg-white rounded-2xl shadow-lg p-6"
+                        className="flex flex-col sm:flex-row gap-4"
                     >
-                        <h2 className="text-lg font-bold text-gray-900 mb-4">Host</h2>
-                        <div className="flex items-center gap-4">
-                            <img src={session.teacher.avatar} alt="" className="w-14 h-14 rounded-2xl" />
-                            <div>
-                                <p className="font-bold text-gray-900">{session.teacher.name}</p>
-                                <p className="text-sm text-gray-500">{session.teacher.subject} Teacher</p>
-                            </div>
+                        <div className="relative flex-1">
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                            <input
+                                type="text"
+                                placeholder="Search students..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="w-full pl-12 pr-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-400 focus:border-transparent"
+                            />
                         </div>
+                        <select
+                            value={filterStatus}
+                            onChange={(e) => setFilterStatus(e.target.value)}
+                            className="px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm"
+                        >
+                            <option value="all">All Status</option>
+                            <option value="present">Present</option>
+                            <option value="late">Late</option>
+                            <option value="left-early">Left Early</option>
+                            <option value="absent">Absent</option>
+                        </select>
                     </motion.div>
 
-                    {/* Recording */}
+                    {/* Attendance Table */}
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.2 }}
-                        className="bg-white rounded-2xl shadow-lg p-6"
+                        className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden"
                     >
-                        <h2 className="text-lg font-bold text-gray-900 mb-4">Recording</h2>
-                        {session.recordingUrl ? (
-                            <a
-                                href={session.recordingUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="flex items-center gap-3 p-4 rounded-xl bg-purple-50 hover:bg-purple-100 transition-colors"
-                            >
-                                <div className="w-10 h-10 rounded-lg bg-purple-500 flex items-center justify-center">
-                                    <Play className="w-5 h-5 text-white" />
-                                </div>
-                                <div className="flex-1">
-                                    <p className="font-medium text-gray-900">Watch Recording</p>
-                                    <p className="text-xs text-gray-500">Available on Google Drive</p>
-                                </div>
-                                <Download className="w-5 h-5 text-purple-500" />
-                            </a>
-                        ) : (
-                            <div className="text-center py-6">
-                                <Video className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                                <p className="text-gray-500 text-sm">
-                                    {session.status === 'live' ? 'Recording will be available after the session ends' : 'No recording available'}
-                                </p>
+                        <div className="p-4 border-b border-gray-100 flex items-center justify-between">
+                            <div>
+                                <h3 className="font-bold text-gray-900">{selectedSession.title}</h3>
+                                <p className="text-sm text-gray-500">{selectedSession.courseName} • {selectedSession.teacherName}</p>
                             </div>
-                        )}
+                            <div className="text-right">
+                                <p className="text-sm text-gray-500">Duration</p>
+                                <p className="font-semibold text-gray-900">{selectedSession.startTime} - {selectedSession.endTime}</p>
+                            </div>
+                        </div>
+
+                        <div className="overflow-x-auto">
+                            <table className="w-full">
+                                <thead className="bg-gray-50 border-b border-gray-100">
+                                    <tr>
+                                        <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600">Student</th>
+                                        <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600">Joined At</th>
+                                        <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600">Duration</th>
+                                        <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600">Participation</th>
+                                        <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600">Status</th>
+                                        <th className="text-right px-6 py-4 text-sm font-semibold text-gray-600">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100">
+                                    {filteredAttendees.map((attendee) => {
+                                        const config = statusConfig[attendee.status];
+                                        return (
+                                            <tr key={attendee.id} className="hover:bg-gray-50 transition-colors">
+                                                <td className="px-6 py-4">
+                                                    <div className="flex items-center gap-3">
+                                                        <img src={attendee.avatar} alt="" className="w-10 h-10 rounded-xl object-cover" />
+                                                        <div>
+                                                            <p className="font-medium text-gray-900">{attendee.name}</p>
+                                                            <p className="text-xs text-gray-500">{attendee.email}</p>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <p className="text-sm text-gray-700">{attendee.joinedAt || '-'}</p>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <p className="text-sm text-gray-700">{attendee.duration} min</p>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
+                                                            <div
+                                                                className={`h-full rounded-full ${attendee.participation >= 80 ? 'bg-emerald-500' :
+                                                                        attendee.participation >= 50 ? 'bg-amber-500' : 'bg-red-500'
+                                                                    }`}
+                                                                style={{ width: `${attendee.participation}%` }}
+                                                            />
+                                                        </div>
+                                                        <span className="text-sm text-gray-600">{attendee.participation}%</span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-${config.color}-100 text-${config.color}-700`}>
+                                                        <config.icon className="w-3.5 h-3.5" />
+                                                        {config.label}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <div className="flex items-center justify-end gap-2">
+                                                        {selectedSession.status === 'live' && (
+                                                            <>
+                                                                <button
+                                                                    onClick={() => markAttendance(attendee.id, 'present')}
+                                                                    className="p-2 rounded-lg hover:bg-emerald-100 text-emerald-500"
+                                                                    title="Mark Present"
+                                                                >
+                                                                    <CheckCircle className="w-4 h-4" />
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => markAttendance(attendee.id, 'absent')}
+                                                                    className="p-2 rounded-lg hover:bg-red-100 text-red-500"
+                                                                    title="Mark Absent"
+                                                                >
+                                                                    <XCircle className="w-4 h-4" />
+                                                                </button>
+                                                            </>
+                                                        )}
+                                                        <button
+                                                            onClick={() => setShowDetails(showDetails === attendee.id ? null : attendee.id)}
+                                                            className="p-2 rounded-lg hover:bg-gray-100 text-gray-500"
+                                                        >
+                                                            <Eye className="w-4 h-4" />
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
                     </motion.div>
 
-                    {/* Session Notes */}
+                    {/* Attendance Progress Bar */}
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.25 }}
-                        className="bg-white rounded-2xl shadow-lg p-6"
+                        className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6"
                     >
-                        <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                            <MessageSquare className="w-5 h-5" />
-                            Session Notes
-                        </h2>
-                        <textarea
-                            placeholder="Add notes about this session..."
-                            rows={4}
-                            className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-red-400 focus:border-transparent resize-none text-sm"
-                        />
-                        <button className="mt-3 w-full py-2 bg-gray-100 hover:bg-gray-200 rounded-xl text-gray-700 font-medium transition-colors">
-                            Save Notes
-                        </button>
+                        <h3 className="font-bold text-gray-900 mb-4">Attendance Overview</h3>
+                        <div className="h-8 bg-gray-100 rounded-full overflow-hidden flex">
+                            <motion.div
+                                initial={{ width: 0 }}
+                                animate={{ width: `${(stats.present / selectedSession.totalEnrolled) * 100}%` }}
+                                className="bg-emerald-500 h-full"
+                                title={`Present: ${stats.present}`}
+                            />
+                            <motion.div
+                                initial={{ width: 0 }}
+                                animate={{ width: `${(stats.late / selectedSession.totalEnrolled) * 100}%` }}
+                                className="bg-amber-500 h-full"
+                                title={`Late: ${stats.late}`}
+                            />
+                            <motion.div
+                                initial={{ width: 0 }}
+                                animate={{ width: `${(stats.leftEarly / selectedSession.totalEnrolled) * 100}%` }}
+                                className="bg-orange-500 h-full"
+                                title={`Left Early: ${stats.leftEarly}`}
+                            />
+                            <motion.div
+                                initial={{ width: 0 }}
+                                animate={{ width: `${(stats.absent / selectedSession.totalEnrolled) * 100}%` }}
+                                className="bg-red-500 h-full"
+                                title={`Absent: ${stats.absent}`}
+                            />
+                        </div>
+                        <div className="flex items-center justify-center gap-6 mt-4">
+                            {[
+                                { label: 'Present', count: stats.present, color: 'emerald' },
+                                { label: 'Late', count: stats.late, color: 'amber' },
+                                { label: 'Left Early', count: stats.leftEarly, color: 'orange' },
+                                { label: 'Absent', count: stats.absent, color: 'red' },
+                            ].map((item) => (
+                                <div key={item.label} className="flex items-center gap-2">
+                                    <div className={`w-3 h-3 rounded-full bg-${item.color}-500`} />
+                                    <span className="text-sm text-gray-600">{item.label} ({item.count})</span>
+                                </div>
+                            ))}
+                        </div>
                     </motion.div>
-                </div>
-            </div>
+                </>
+            )}
         </div>
     );
 }

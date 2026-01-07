@@ -55,6 +55,15 @@ const navItems = [
         icon3D: '/ASSITS/play.png',
         color: 'red',
     },
+    {
+        id: 'availability',
+        label: 'My Availability',
+        labelAr: 'مواعيدي',
+        href: '/teacher/availability',
+        icon: Video,
+        icon3D: null,
+        color: 'cyan',
+    },
 ];
 
 // Motivational quotes for teachers
@@ -131,8 +140,8 @@ export default function TeacherSidebar({ isCollapsed, onToggle }: SidebarProps) 
                             <motion.div
                                 whileHover={{ scale: 1.02 }}
                                 whileTap={{ scale: 0.98 }}
-                                className={`relative flex items-center gap-4 px-4 py-3 rounded-2xl transition-all cursor-pointer ${isActive
-                                    ? 'bg-blue-500/10 shadow-[0_0_20px_rgba(59,130,246,0.2)]'
+                                className={`relative flex items-center ${isCollapsed ? 'justify-center' : 'gap-4'} px-4 py-3 rounded-2xl transition-all cursor-pointer ${isActive
+                                    ? `bg-blue-500/10 ${isCollapsed ? 'shadow-[0_0_15px_rgba(59,130,246,0.3)]' : 'shadow-[0_0_20px_rgba(59,130,246,0.2)]'}`
                                     : 'hover:bg-gray-50'
                                     }`}
                             >
@@ -150,6 +159,13 @@ export default function TeacherSidebar({ isCollapsed, onToggle }: SidebarProps) 
                                         />
                                     ) : (
                                         <Icon className={`w-6 h-6 ${isActive ? 'text-blue-500' : 'text-gray-500'}`} />
+                                    )}
+                                    {/* Active indicator when collapsed - positioned under icon */}
+                                    {isActive && isCollapsed && (
+                                        <motion.div
+                                            layoutId="teacherActiveIndicator"
+                                            className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-blue-500"
+                                        />
                                     )}
                                 </div>
 
@@ -169,10 +185,10 @@ export default function TeacherSidebar({ isCollapsed, onToggle }: SidebarProps) 
                                     </motion.div>
                                 )}
 
-                                {/* Active Indicator */}
-                                {isActive && (
+                                {/* Active Indicator - only when expanded */}
+                                {isActive && !isCollapsed && (
                                     <motion.div
-                                        layoutId="teacherActiveIndicator"
+                                        layoutId="teacherActiveIndicatorExpanded"
                                         className="absolute right-2 w-2 h-2 rounded-full bg-blue-500"
                                     />
                                 )}

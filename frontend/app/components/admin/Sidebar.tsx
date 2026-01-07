@@ -59,10 +59,19 @@ const navItems = [
         id: 'sessions',
         label: 'Live Sessions',
         labelAr: 'الحصص المباشرة',
-        href: '/admin/sessions',
+        href: '/admin/live-sessions',
         icon: Video,
         icon3D: '/ASSITS/play.png',
         color: 'red',
+    },
+    {
+        id: 'payroll',
+        label: 'Payroll',
+        labelAr: 'المالية',
+        href: '/admin/payroll',
+        icon: BarChart3,
+        icon3D: null,
+        color: 'emerald',
     },
     {
         id: 'reports',
@@ -149,8 +158,8 @@ export default function AdminSidebar({ isCollapsed, onToggle }: SidebarProps) {
                             <motion.div
                                 whileHover={{ scale: 1.02 }}
                                 whileTap={{ scale: 0.98 }}
-                                className={`relative flex items-center gap-4 px-4 py-3 rounded-2xl transition-all cursor-pointer ${isActive
-                                    ? 'bg-[var(--color-primary-500)]/10 shadow-[0_0_20px_rgba(16,185,129,0.2)]'
+                                className={`relative flex items-center ${isCollapsed ? 'justify-center' : 'gap-4'} px-4 py-3 rounded-2xl transition-all cursor-pointer ${isActive
+                                    ? `bg-[var(--color-primary-500)]/10 ${isCollapsed ? 'shadow-[0_0_15px_rgba(16,185,129,0.3)]' : 'shadow-[0_0_20px_rgba(16,185,129,0.2)]'}`
                                     : 'hover:bg-gray-50'
                                     }`}
                             >
@@ -168,6 +177,13 @@ export default function AdminSidebar({ isCollapsed, onToggle }: SidebarProps) {
                                         />
                                     ) : (
                                         <Icon className={`w-6 h-6 ${isActive ? 'text-[var(--color-primary-500)]' : 'text-gray-500'}`} />
+                                    )}
+                                    {/* Active indicator when collapsed - positioned under icon */}
+                                    {isActive && isCollapsed && (
+                                        <motion.div
+                                            layoutId="activeIndicator"
+                                            className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-[var(--color-primary-500)]"
+                                        />
                                     )}
                                 </div>
 
@@ -187,10 +203,10 @@ export default function AdminSidebar({ isCollapsed, onToggle }: SidebarProps) {
                                     </motion.div>
                                 )}
 
-                                {/* Active Indicator */}
-                                {isActive && (
+                                {/* Active Indicator - only when expanded */}
+                                {isActive && !isCollapsed && (
                                     <motion.div
-                                        layoutId="activeIndicator"
+                                        layoutId="activeIndicatorExpanded"
                                         className="absolute right-2 w-2 h-2 rounded-full bg-[var(--color-primary-500)]"
                                     />
                                 )}
