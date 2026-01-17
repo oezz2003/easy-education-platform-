@@ -1,66 +1,86 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import Image from 'next/image';
-import { Users, GraduationCap, BookOpen, Video, TrendingUp, DollarSign, Clock, Star } from 'lucide-react';
-
-// Stat cards data
-const stats = [
-    {
-        label: 'Total Students',
-        value: '1,234',
-        change: '+12%',
-        changeType: 'positive',
-        icon: Users,
-        icon3D: '/login-signup assits/student.png',
-        color: 'emerald',
-        bgColor: 'bg-emerald-50',
-        borderColor: 'border-emerald-400',
-    },
-    {
-        label: 'Total Teachers',
-        value: '48',
-        change: '+3',
-        changeType: 'positive',
-        icon: GraduationCap,
-        icon3D: '/login-signup assits/teacher.png',
-        color: 'blue',
-        bgColor: 'bg-blue-50',
-        borderColor: 'border-blue-400',
-    },
-    {
-        label: 'Active Courses',
-        value: '156',
-        change: '+8%',
-        changeType: 'positive',
-        icon: BookOpen,
-        icon3D: '/ASSITS/folders.png',
-        color: 'purple',
-        bgColor: 'bg-purple-50',
-        borderColor: 'border-purple-400',
-    },
-    {
-        label: 'Live Sessions',
-        value: '12',
-        change: 'Today',
-        changeType: 'neutral',
-        icon: Video,
-        icon3D: '/ASSITS/play.png',
-        color: 'red',
-        bgColor: 'bg-red-50',
-        borderColor: 'border-red-400',
-    },
-];
-
-// Recent activity data
-const recentActivity = [
-    { type: 'student', action: 'New student registered', name: 'Ahmed Hassan', time: '2 min ago' },
-    { type: 'course', action: 'Course completed', name: 'Math 101', time: '15 min ago' },
-    { type: 'teacher', action: 'Teacher added', name: 'Dr. Sara Ali', time: '1 hour ago' },
-    { type: 'session', action: 'Live session started', name: 'Physics Class', time: '2 hours ago' },
-];
+import { Users, GraduationCap, BookOpen, Video, TrendingUp, DollarSign, Clock, Star, Loader2 } from 'lucide-react';
+import { useAdminStats } from '@/hooks/useAdminStats';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function AdminDashboard() {
+    const { stats, isLoading, error, refetch } = useAdminStats();
+    const { profile } = useAuth();
+
+    // Dynamic stats cards based on real data
+    const statsCards = [
+        {
+            label: 'Total Students',
+            value: stats?.totalStudents?.toLocaleString() || '0',
+            change: '+12%',
+            changeType: 'positive',
+            icon: Users,
+            icon3D: '/login-signup assits/student.png',
+            color: 'emerald',
+            bgColor: 'bg-emerald-50',
+            borderColor: 'border-emerald-400',
+        },
+        {
+            label: 'Total Teachers',
+            value: stats?.totalTeachers?.toString() || '0',
+            change: '+3',
+            changeType: 'positive',
+            icon: GraduationCap,
+            icon3D: '/login-signup assits/teacher.png',
+            color: 'blue',
+            bgColor: 'bg-blue-50',
+            borderColor: 'border-blue-400',
+        },
+        {
+            label: 'Active Courses',
+            value: stats?.totalCourses?.toString() || '0',
+            change: '+8%',
+            changeType: 'positive',
+            icon: BookOpen,
+            icon3D: '/ASSITS/folders.png',
+            color: 'purple',
+            bgColor: 'bg-purple-50',
+            borderColor: 'border-purple-400',
+        },
+        {
+            label: 'Live Sessions Today',
+            value: stats?.todaySessions?.toString() || '0',
+            change: 'Today',
+            changeType: 'neutral',
+            icon: Video,
+            icon3D: '/ASSITS/play.png',
+            color: 'red',
+            bgColor: 'bg-red-50',
+            borderColor: 'border-red-400',
+        },
+    ];
+
+    // Loading state
+    if (isLoading) {
+        return (
+            <div className="flex items-center justify-center min-h-[400px]">
+                <Loader2 className="w-8 h-8 animate-spin text-[var(--color-primary-500)]" />
+            </div>
+        );
+    }
+
+    // Error state
+    if (error) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[400px] text-center">
+                <p className="text-red-500 mb-4">{error}</p>
+                <button
+                    onClick={refetch}
+                    className="px-4 py-2 bg-[var(--color-primary-500)] text-white rounded-xl hover:bg-[var(--color-primary-600)]"
+                >
+                    Try Again
+                </button>
+            </div>
+        );
+    }
+
     return (
         <div className="space-y-6">
             {/* Page Header */}
@@ -70,7 +90,7 @@ export default function AdminDashboard() {
                 transition={{ duration: 0.5 }}
             >
                 <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
-                    Welcome back, Boss! 👋
+                    Welcome back{profile?.full_name ? `, ${profile.full_name.split(' ')[0]}` : ''}! 👋
                 </h1>
                 <p className="text-gray-600">
                     Here's what's happening with Easy Education today.
@@ -79,7 +99,7 @@ export default function AdminDashboard() {
 
             {/* Stats Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-                {stats.map((stat, index) => (
+                {statsCards.map((stat, index) => (
                     <motion.div
                         key={stat.label}
                         initial={{ opacity: 0, y: 20 }}
@@ -125,34 +145,49 @@ export default function AdminDashboard() {
                 >
                     <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
                         <Clock className="w-5 h-5 text-[var(--color-primary-500)]" />
-                        Recent Activity
+                        Platform Overview
                     </h3>
                     <div className="space-y-4">
-                        {recentActivity.map((activity, index) => (
-                            <motion.div
-                                key={index}
-                                initial={{ opacity: 0, x: -20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: 0.5 + index * 0.1 }}
-                                className="flex items-center gap-4 p-3 rounded-xl hover:bg-gray-50 transition-colors"
-                            >
-                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${activity.type === 'student' ? 'bg-emerald-100' :
-                                    activity.type === 'teacher' ? 'bg-blue-100' :
-                                        activity.type === 'course' ? 'bg-purple-100' :
-                                            'bg-red-100'
-                                    }`}>
-                                    {activity.type === 'student' && <Users className="w-5 h-5 text-emerald-600" />}
-                                    {activity.type === 'teacher' && <GraduationCap className="w-5 h-5 text-blue-600" />}
-                                    {activity.type === 'course' && <BookOpen className="w-5 h-5 text-purple-600" />}
-                                    {activity.type === 'session' && <Video className="w-5 h-5 text-red-600" />}
-                                </div>
-                                <div className="flex-1">
-                                    <p className="text-sm font-medium text-gray-900">{activity.action}</p>
-                                    <p className="text-xs text-gray-500">{activity.name}</p>
-                                </div>
-                                <span className="text-xs text-gray-400">{activity.time}</span>
-                            </motion.div>
-                        ))}
+                        <div className="flex items-center gap-4 p-3 rounded-xl hover:bg-gray-50 transition-colors">
+                            <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-emerald-100">
+                                <Users className="w-5 h-5 text-emerald-600" />
+                            </div>
+                            <div className="flex-1">
+                                <p className="text-sm font-medium text-gray-900">Total Students</p>
+                                <p className="text-xs text-gray-500">Registered on platform</p>
+                            </div>
+                            <span className="text-lg font-bold text-gray-900">{stats?.totalStudents || 0}</span>
+                        </div>
+                        <div className="flex items-center gap-4 p-3 rounded-xl hover:bg-gray-50 transition-colors">
+                            <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-blue-100">
+                                <GraduationCap className="w-5 h-5 text-blue-600" />
+                            </div>
+                            <div className="flex-1">
+                                <p className="text-sm font-medium text-gray-900">Active Teachers</p>
+                                <p className="text-xs text-gray-500">Available for sessions</p>
+                            </div>
+                            <span className="text-lg font-bold text-gray-900">{stats?.totalTeachers || 0}</span>
+                        </div>
+                        <div className="flex items-center gap-4 p-3 rounded-xl hover:bg-gray-50 transition-colors">
+                            <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-purple-100">
+                                <BookOpen className="w-5 h-5 text-purple-600" />
+                            </div>
+                            <div className="flex-1">
+                                <p className="text-sm font-medium text-gray-900">Active Batches</p>
+                                <p className="text-xs text-gray-500">Currently running</p>
+                            </div>
+                            <span className="text-lg font-bold text-gray-900">{stats?.activeBatches || 0}</span>
+                        </div>
+                        <div className="flex items-center gap-4 p-3 rounded-xl hover:bg-gray-50 transition-colors">
+                            <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-amber-100">
+                                <DollarSign className="w-5 h-5 text-amber-600" />
+                            </div>
+                            <div className="flex-1">
+                                <p className="text-sm font-medium text-gray-900">Pending Invoices</p>
+                                <p className="text-xs text-gray-500">Awaiting payment</p>
+                            </div>
+                            <span className="text-lg font-bold text-gray-900">{stats?.pendingInvoices || 0}</span>
+                        </div>
                     </div>
                 </motion.div>
 
@@ -173,21 +208,23 @@ export default function AdminDashboard() {
                                 <DollarSign className="w-5 h-5 text-amber-600" />
                                 <span className="text-sm text-gray-700">Revenue</span>
                             </div>
-                            <span className="font-bold text-gray-900">$12,450</span>
+                            <span className="font-bold text-gray-900">
+                                ${stats?.totalRevenue?.toLocaleString() || '0'}
+                            </span>
                         </div>
                         <div className="flex items-center justify-between p-3 bg-emerald-50 rounded-xl">
                             <div className="flex items-center gap-3">
                                 <TrendingUp className="w-5 h-5 text-emerald-600" />
-                                <span className="text-sm text-gray-700">Growth</span>
+                                <span className="text-sm text-gray-700">Courses</span>
                             </div>
-                            <span className="font-bold text-emerald-600">+24%</span>
+                            <span className="font-bold text-emerald-600">{stats?.totalCourses || 0}</span>
                         </div>
                         <div className="flex items-center justify-between p-3 bg-blue-50 rounded-xl">
                             <div className="flex items-center gap-3">
-                                <Clock className="w-5 h-5 text-blue-600" />
-                                <span className="text-sm text-gray-700">Avg. Session</span>
+                                <Video className="w-5 h-5 text-blue-600" />
+                                <span className="text-sm text-gray-700">Today's Sessions</span>
                             </div>
-                            <span className="font-bold text-gray-900">45 min</span>
+                            <span className="font-bold text-gray-900">{stats?.todaySessions || 0}</span>
                         </div>
                     </div>
 
@@ -208,7 +245,7 @@ export default function AdminDashboard() {
                         />
                         <h4 className="font-bold mb-1">Keep it up! 🎉</h4>
                         <p className="text-sm text-white/80">
-                            You're doing great, Boss. The platform is growing!
+                            You're doing great! The platform is growing!
                         </p>
                     </motion.div>
                 </motion.div>
@@ -216,3 +253,4 @@ export default function AdminDashboard() {
         </div>
     );
 }
+

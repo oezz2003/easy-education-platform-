@@ -14,6 +14,7 @@ import {
     ArrowRight,
     Command
 } from 'lucide-react';
+import { UserAvatar } from './UserAvatar';
 
 interface SearchResult {
     id: string;
@@ -31,10 +32,10 @@ interface SearchBarProps {
 
 // Mock search data
 const mockData: SearchResult[] = [
-    { id: '1', title: 'Omar Khaled', subtitle: 'Student • Secondary Level', type: 'student', href: '/admin/students/1', image: 'https://i.pravatar.cc/150?img=12' },
-    { id: '2', title: 'Fatma Nour', subtitle: 'Student • Preparatory Level', type: 'student', href: '/admin/students/2', image: 'https://i.pravatar.cc/150?img=9' },
-    { id: '3', title: 'Ahmed Hassan', subtitle: 'Teacher • Mathematics', type: 'teacher', href: '/admin/teachers/1', image: 'https://i.pravatar.cc/150?img=11' },
-    { id: '4', title: 'Sara Ali', subtitle: 'Teacher • Physics', type: 'teacher', href: '/admin/teachers/2', image: 'https://i.pravatar.cc/150?img=5' },
+    { id: '1', title: 'Omar Khaled', subtitle: 'Student • Secondary Level', type: 'student', href: '/admin/students/1', image: undefined },
+    { id: '2', title: 'Fatma Nour', subtitle: 'Student • Preparatory Level', type: 'student', href: '/admin/students/2', image: undefined },
+    { id: '3', title: 'Ahmed Hassan', subtitle: 'Teacher • Mathematics', type: 'teacher', href: '/admin/teachers/1', image: undefined },
+    { id: '4', title: 'Sara Ali', subtitle: 'Teacher • Physics', type: 'teacher', href: '/admin/teachers/2', image: undefined },
     { id: '5', title: 'Advanced Mathematics', subtitle: 'Course • 45 lessons', type: 'course', href: '/admin/courses/1', image: 'https://images.unsplash.com/photo-1509228468518-180dd4864904?w=100' },
     { id: '6', title: 'Physics Fundamentals', subtitle: 'Course • 32 lessons', type: 'course', href: '/admin/courses/2', image: 'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=100' },
     { id: '7', title: 'Algebra Live Session', subtitle: 'Session • Today 2:00 PM', type: 'session', href: '/admin/live-sessions/1' },
@@ -211,7 +212,11 @@ export default function SearchBar({ variant, placeholder }: SearchBarProps) {
                                                     className="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 cursor-pointer transition-colors"
                                                 >
                                                     {result.image ? (
-                                                        <img src={result.image} alt="" className="w-10 h-10 rounded-xl object-cover" />
+                                                        <UserAvatar
+                                                            src={result.image}
+                                                            name={result.title}
+                                                            className="w-10 h-10 rounded-xl"
+                                                        />
                                                     ) : (
                                                         <div className={`w-10 h-10 rounded-xl bg-${color}-100 flex items-center justify-center`}>
                                                             <Icon className={`w-5 h-5 text-${color}-500`} />

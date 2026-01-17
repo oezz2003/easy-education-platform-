@@ -20,6 +20,7 @@ import {
     Eye,
     DollarSign
 } from 'lucide-react';
+import { UserAvatar } from '@/app/components/shared/UserAvatar';
 
 // Mock course data
 const courseData = {
@@ -52,10 +53,10 @@ const lessons = [
 
 // Mock enrolled students
 const enrolledStudents = [
-    { id: 1, name: 'Omar Ahmed', avatar: 'https://i.pravatar.cc/150?img=1', progress: 85, lastActive: '2 hours ago' },
-    { id: 2, name: 'Sara Hassan', avatar: 'https://i.pravatar.cc/150?img=5', progress: 72, lastActive: '1 day ago' },
-    { id: 3, name: 'Khaled Mohamed', avatar: 'https://i.pravatar.cc/150?img=3', progress: 95, lastActive: '5 hours ago' },
-    { id: 4, name: 'Fatma Ali', avatar: 'https://i.pravatar.cc/150?img=9', progress: 45, lastActive: '3 days ago' },
+    { id: 1, name: 'Omar Ahmed', avatar: null, progress: 85, lastActive: '2 hours ago' },
+    { id: 2, name: 'Sara Hassan', avatar: null, progress: 72, lastActive: '1 day ago' },
+    { id: 3, name: 'Khaled Mohamed', avatar: null, progress: 95, lastActive: '5 hours ago' },
+    { id: 4, name: 'Fatma Ali', avatar: null, progress: 45, lastActive: '3 days ago' },
 ];
 
 export default function CourseDetailPage() {
@@ -279,10 +280,10 @@ export default function CourseDetailPage() {
                                 transition={{ delay: index * 0.05 }}
                                 className="flex items-center gap-4 p-4 bg-gray-50 rounded-2xl hover:bg-gray-100 transition-colors"
                             >
-                                <img
+                                <UserAvatar
                                     src={student.avatar}
-                                    alt={student.name}
-                                    className="w-12 h-12 rounded-full object-cover"
+                                    name={student.name}
+                                    className="w-12 h-12 rounded-full"
                                 />
                                 <div className="flex-1">
                                     <p className="font-medium text-gray-900">{student.name}</p>

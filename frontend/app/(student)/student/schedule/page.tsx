@@ -11,40 +11,21 @@ import {
     BookOpen,
     ChevronLeft,
     ChevronRight,
-    Bell
+    Bell,
+    Loader2
 } from 'lucide-react';
+import { useSessions } from '@/hooks/useSessions';
 
 // Days of the week
 const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-
-// Mock schedule data
-const scheduleItems = [
-    { id: 1, title: 'Algebra Live Q&A', type: 'live', time: '10:00 AM', duration: '1h', course: 'Advanced Algebra', teacher: 'Ahmed Hassan', day: 3 },
-    { id: 2, title: 'Calculus Homework', type: 'assignment', time: '6:00 PM', course: 'Calculus Mastery', day: 3 },
-    { id: 3, title: 'Geometry Quiz', type: 'quiz', time: '8:00 PM', course: 'Geometry Basics', day: 3 },
-    { id: 4, title: 'Study: Chapter 5', type: 'study', time: '4:00 PM', course: 'Advanced Algebra', day: 4 },
-    { id: 5, title: 'Physics Lab Session', type: 'live', time: '2:00 PM', duration: '2h', course: 'Physics Fundamentals', teacher: 'Omar Ibrahim', day: 5 },
-    { id: 6, title: 'Math Practice Test', type: 'quiz', time: '10:00 AM', course: 'Advanced Algebra', day: 6 },
-];
-
-// Upcoming deadlines
-const upcomingDeadlines = [
-    { id: 1, title: 'Chapter 5 Assignment', course: 'Advanced Algebra', dueDate: 'Tomorrow, 6:00 PM', priority: 'high' },
-    { id: 2, title: 'Calculus Quiz', course: 'Calculus Mastery', dueDate: 'In 3 days', priority: 'medium' },
-    { id: 3, title: 'Geometry Project', course: 'Geometry Basics', dueDate: 'Next week', priority: 'low' },
-];
-
-// Upcoming live sessions
-const upcomingSessions = [
-    { id: 1, title: 'Algebra Live Q&A', course: 'Advanced Algebra', teacher: 'Ahmed Hassan', time: 'Today, 10:00 AM', attending: true },
-    { id: 2, title: 'Physics Lab Session', course: 'Physics Fundamentals', teacher: 'Omar Ibrahim', time: 'Friday, 2:00 PM', attending: false },
-];
 
 const typeColors = {
     live: 'bg-red-100 text-red-700 border-red-200',
     assignment: 'bg-amber-100 text-amber-700 border-amber-200',
     quiz: 'bg-purple-100 text-purple-700 border-purple-200',
     study: 'bg-blue-100 text-blue-700 border-blue-200',
+    scheduled: 'bg-blue-100 text-blue-700 border-blue-200',
+    completed: 'bg-gray-100 text-gray-700 border-gray-200',
 };
 
 const typeIcons = {
@@ -52,10 +33,49 @@ const typeIcons = {
     assignment: FileText,
     quiz: BookOpen,
     study: Clock,
+    scheduled: Video,
+    completed: Video,
 };
 
 export default function SchedulePage() {
     const [currentWeek, setCurrentWeek] = useState(0);
+
+    // Fetch real sessions
+    const { sessions: rawSessions, isLoading, error } = useSessions();
+
+    // Transform sessions to schedule items
+    const scheduleItems = rawSessions.map(s => {
+        const sessionDate = new Date(s.session_date);
+        const session = s as any; // Runtime joined data
+        return {
+            id: s.id,
+            title: s.title || 'Session',
+            type: s.status === 'live' ? 'live' : 'scheduled',
+            time: s.start_time || '',
+            duration: s.duration_minutes ? `${s.duration_minutes}m` : '',
+            course: session.course?.name || 'General',
+            teacher: session.teacher?.profile?.full_name || 'Teacher',
+            day: sessionDate.getDay(),
+        };
+    });
+
+    // Placeholder deadlines
+    const upcomingDeadlines = [
+        { id: '1', title: 'Chapter 5 Assignment', course: 'Advanced Algebra', dueDate: 'Tomorrow, 6:00 PM', priority: 'high' },
+        { id: '2', title: 'Calculus Quiz', course: 'Calculus Mastery', dueDate: 'In 3 days', priority: 'medium' },
+    ];
+
+    const upcomingSessions = rawSessions.slice(0, 2).map(s => {
+        const session = s as any;
+        return {
+            id: s.id,
+            title: s.title || 'Session',
+            course: session.course?.name || 'Course',
+            teacher: session.teacher?.profile?.full_name || 'Teacher',
+            time: `${s.session_date} ${s.start_time}`,
+            attending: true,
+        };
+    });
 
     // Get current date info
     const today = new Date();
@@ -66,7 +86,6 @@ export default function SchedulePage() {
         const dates = [];
         const startOfWeek = new Date(today);
         startOfWeek.setDate(today.getDate() - currentDay + (offset * 7));
-
         for (let i = 0; i < 7; i++) {
             const date = new Date(startOfWeek);
             date.setDate(startOfWeek.getDate() + i);
@@ -76,6 +95,14 @@ export default function SchedulePage() {
     };
 
     const weekDates = getWeekDates(currentWeek);
+
+    if (isLoading) {
+        return (
+            <div className="flex items-center justify-center min-h-[400px]">
+                <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-6">

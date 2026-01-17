@@ -3,6 +3,7 @@
 import { useParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
+import { useState, useEffect } from 'react';
 import {
     ArrowLeft,
     Mail,
@@ -19,126 +20,54 @@ import {
     Users,
     Play,
     FileText,
-    Award
+    Award,
+    Loader2
 } from 'lucide-react';
-
-// Mock student data
-const mockStudents = [
-    {
-        id: '1',
-        name: 'Ahmed Mohamed',
-        email: 'ahmed.m@email.com',
-        phone: '+20 123 456 7890',
-        avatar: 'https://i.pravatar.cc/150?img=11',
-        level: 'Primary',
-        levelId: 'primary',
-        enrolledCourses: 5,
-        enrollmentDate: '2024-01-15',
-        status: 'active',
-        parentName: 'Mohamed Hassan',
-        parentPhone: '+20 111 222 3333',
-        completedLessons: 45,
-        totalLessons: 120,
-        averageGrade: 85,
-        attendanceRate: 92,
-    },
-    {
-        id: '2',
-        name: 'Sara Ali',
-        email: 'sara.ali@email.com',
-        phone: '+20 100 200 3000',
-        avatar: 'https://i.pravatar.cc/150?img=5',
-        level: 'Preparatory',
-        levelId: 'preparatory',
-        enrolledCourses: 3,
-        enrollmentDate: '2024-02-20',
-        status: 'active',
-        parentName: 'Ali Ibrahim',
-        parentPhone: '+20 111 333 4444',
-        completedLessons: 32,
-        totalLessons: 90,
-        averageGrade: 92,
-        attendanceRate: 98,
-    },
-];
-
-// Mock enrolled courses
-const enrolledCourses = [
-    {
-        id: '1',
-        title: 'Advanced Mathematics',
-        teacher: 'Ahmed Hassan',
-        progress: 75,
-        grade: 88,
-        thumbnail: 'https://images.unsplash.com/photo-1509228468518-180dd4864904?w=400',
-    },
-    {
-        id: '2',
-        title: 'Physics Fundamentals',
-        teacher: 'Sara Ali',
-        progress: 60,
-        grade: 82,
-        thumbnail: 'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=400',
-    },
-    {
-        id: '3',
-        title: 'English Grammar',
-        teacher: 'Mohamed Farid',
-        progress: 90,
-        grade: 95,
-        thumbnail: 'https://images.unsplash.com/photo-1546410531-bb4caa6b424d?w=400',
-    },
-];
-
-// Mock activity timeline
-const activityTimeline = [
-    {
-        id: '1',
-        type: 'lesson',
-        title: 'Completed "Algebra Basics"',
-        course: 'Advanced Mathematics',
-        date: '2024-12-28',
-        icon: Play,
-    },
-    {
-        id: '2',
-        type: 'grade',
-        title: 'Scored 92% on Quiz',
-        course: 'Physics Fundamentals',
-        date: '2024-12-27',
-        icon: Award,
-    },
-    {
-        id: '3',
-        type: 'resource',
-        title: 'Downloaded "Study Guide"',
-        course: 'English Grammar',
-        date: '2024-12-26',
-        icon: FileText,
-    },
-    {
-        id: '4',
-        type: 'lesson',
-        title: 'Completed "Verb Tenses"',
-        course: 'English Grammar',
-        date: '2024-12-25',
-        icon: Play,
-    },
-];
+import { useStudents } from '@/hooks/useStudents';
 
 const levelColors = {
     primary: 'bg-emerald-50 text-emerald-600 border-emerald-200',
     preparatory: 'bg-blue-50 text-blue-600 border-blue-200',
     secondary: 'bg-purple-50 text-purple-600 border-purple-200',
+    university: 'bg-indigo-50 text-indigo-600 border-indigo-200',
 };
 
 export default function StudentProfilePage() {
     const params = useParams();
     const studentId = params.id as string;
+    const { getStudent } = useStudents();
 
-    const student = mockStudents.find((s) => s.id === studentId);
+    const [student, setStudent] = useState<any>(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
-    if (!student) {
+    useEffect(() => {
+        const fetchStudentData = async () => {
+            if (!studentId) return;
+
+            setIsLoading(true);
+            const { data, error } = await getStudent(studentId);
+
+            if (error) {
+                setError(error);
+            } else {
+                setStudent(data);
+            }
+            setIsLoading(false);
+        };
+
+        fetchStudentData();
+    }, [studentId, getStudent]);
+
+    if (isLoading) {
+        return (
+            <div className="min-h-[60vh] flex items-center justify-center">
+                <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
+            </div>
+        );
+    }
+
+    if (error || !student) {
         return (
             <div className="min-h-[60vh] flex items-center justify-center">
                 <div className="text-center">
@@ -149,7 +78,7 @@ export default function StudentProfilePage() {
                         <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                     </motion.div>
                     <h2 className="text-xl font-bold text-gray-900 mb-2">Student not found</h2>
-                    <p className="text-gray-500 mb-6">The student you're looking for doesn't exist.</p>
+                    <p className="text-gray-500 mb-6">{error || "The student you're looking for doesn't exist."}</p>
                     <Link
                         href="/admin/students"
                         className="text-emerald-500 hover:text-emerald-600 font-medium"
@@ -161,7 +90,14 @@ export default function StudentProfilePage() {
         );
     }
 
-    const progressPercent = Math.round((student.completedLessons / student.totalLessons) * 100);
+    // Calculate stats from real data
+    const enrolledCoursesCount = student.enrollments?.length || 0;
+    // These are placeholders until we have real stats tables
+    const completedLessons = 0;
+    const totalLessons = 0;
+    const averageGrade = 0;
+    const attendanceRate = 0;
+    const progressPercent = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
 
     return (
         <div className="space-y-6">
@@ -192,14 +128,19 @@ export default function StudentProfilePage() {
                             transition={{ delay: 0.1 }}
                             className="relative"
                         >
-                            <img
-                                src={student.avatar}
-                                alt={student.name}
-                                loading="lazy"
-                                className="w-32 h-32 rounded-2xl border-4 border-white shadow-xl object-cover"
-                            />
+                            <div className="w-32 h-32 rounded-2xl border-4 border-white shadow-xl bg-gray-100 flex items-center justify-center overflow-hidden">
+                                {student.profile?.avatar_url ? (
+                                    <img
+                                        src={student.profile.avatar_url}
+                                        alt={student.profile.full_name}
+                                        className="w-full h-full object-cover"
+                                    />
+                                ) : (
+                                    <Users className="w-12 h-12 text-gray-400" />
+                                )}
+                            </div>
                             <span
-                                className={`absolute bottom-2 right-2 w-4 h-4 rounded-full border-2 border-white ${student.status === 'active' ? 'bg-emerald-500' : 'bg-gray-400'
+                                className={`absolute bottom-2 right-2 w-4 h-4 rounded-full border-2 border-white ${student.profile?.status === 'active' ? 'bg-emerald-500' : 'bg-gray-400'
                                     }`}
                             />
                         </motion.div>
@@ -209,18 +150,20 @@ export default function StudentProfilePage() {
                             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                                 <div>
                                     <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
-                                        {student.name}
+                                        {student.profile?.full_name || 'Unnamed Student'}
                                     </h1>
                                     <div className="flex flex-wrap items-center gap-3 mt-2">
-                                        <span
-                                            className={`inline-flex px-3 py-1 rounded-full text-sm font-medium border ${levelColors[student.levelId as keyof typeof levelColors]
-                                                }`}
-                                        >
-                                            {student.level}
-                                        </span>
+                                        {student.level && (
+                                            <span
+                                                className={`inline-flex px-3 py-1 rounded-full text-sm font-medium border ${levelColors[student.level as keyof typeof levelColors] || 'bg-gray-50 text-gray-600 border-gray-200'
+                                                    }`}
+                                            >
+                                                {student.level.charAt(0).toUpperCase() + student.level.slice(1)}
+                                            </span>
+                                        )}
                                         <span className="text-sm text-gray-500">
-                                            Student since{' '}
-                                            {new Date(student.enrollmentDate).toLocaleDateString('en-US', {
+                                            Joined{' '}
+                                            {new Date(student.created_at).toLocaleDateString('en-US', {
                                                 month: 'short',
                                                 year: 'numeric',
                                             })}
@@ -238,13 +181,6 @@ export default function StudentProfilePage() {
                                         <Edit className="w-4 h-4" />
                                         Edit Profile
                                     </motion.button>
-                                    <motion.button
-                                        whileHover={{ scale: 1.05 }}
-                                        whileTap={{ scale: 0.95 }}
-                                        className="p-2 rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors"
-                                    >
-                                        <MoreHorizontal className="w-5 h-5 text-gray-500" />
-                                    </motion.button>
                                 </div>
                             </div>
                         </div>
@@ -256,9 +192,11 @@ export default function StudentProfilePage() {
                             <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center">
                                 <Mail className="w-5 h-5 text-emerald-500" />
                             </div>
-                            <div>
+                            <div className="overflow-hidden">
                                 <p className="text-xs text-gray-500">Email</p>
-                                <p className="font-medium text-gray-900">{student.email}</p>
+                                <p className="font-medium text-gray-900 truncate" title={student.profile?.email}>
+                                    {student.profile?.email}
+                                </p>
                             </div>
                         </div>
                         <div className="flex items-center gap-3">
@@ -267,7 +205,7 @@ export default function StudentProfilePage() {
                             </div>
                             <div>
                                 <p className="text-xs text-gray-500">Phone</p>
-                                <p className="font-medium text-gray-900">{student.phone}</p>
+                                <p className="font-medium text-gray-900">{student.profile?.phone || 'N/A'}</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-3">
@@ -275,8 +213,8 @@ export default function StudentProfilePage() {
                                 <Users className="w-5 h-5 text-purple-500" />
                             </div>
                             <div>
-                                <p className="text-xs text-gray-500">Parent</p>
-                                <p className="font-medium text-gray-900">{student.parentName}</p>
+                                <p className="text-xs text-gray-500">Parent Phone</p>
+                                <p className="font-medium text-gray-900">{student.parent_phone || 'N/A'}</p>
                             </div>
                         </div>
                     </div>
@@ -288,27 +226,27 @@ export default function StudentProfilePage() {
                 {[
                     {
                         label: 'Enrolled Courses',
-                        value: student.enrolledCourses,
+                        value: enrolledCoursesCount,
                         icon: BookOpen,
                         color: 'emerald',
                     },
                     {
-                        label: 'Completed Lessons',
-                        value: student.completedLessons,
-                        icon: Play,
-                        color: 'blue',
+                        label: 'XP Points',
+                        value: student.xp_points || 0,
+                        icon: Star,
+                        color: 'amber',
                     },
                     {
-                        label: 'Average Grade',
-                        value: `${student.averageGrade}%`,
+                        label: 'Streak Days',
+                        value: student.streak_days || 0,
                         icon: TrendingUp,
                         color: 'purple',
                     },
                     {
                         label: 'Attendance',
-                        value: `${student.attendanceRate}%`,
+                        value: `${attendanceRate}%`,
                         icon: Calendar,
-                        color: 'amber',
+                        color: 'blue',
                     },
                 ].map((stat, index) => (
                     <motion.div
@@ -340,56 +278,55 @@ export default function StudentProfilePage() {
                 >
                     <div className="flex items-center justify-between mb-6">
                         <h2 className="text-xl font-bold text-gray-900">Enrolled Courses</h2>
-                        <span className="text-sm text-gray-500">{enrolledCourses.length} courses</span>
+                        <span className="text-sm text-gray-500">{enrolledCoursesCount} courses</span>
                     </div>
 
                     <div className="space-y-4">
-                        {enrolledCourses.map((course, index) => (
-                            <motion.div
-                                key={course.id}
-                                initial={{ opacity: 0, x: -20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: 0.1 * index }}
-                                className="flex gap-4 p-4 rounded-xl border border-gray-100 hover:border-emerald-200 transition-colors"
-                            >
-                                <img
-                                    src={course.thumbnail}
-                                    alt={course.title}
-                                    loading="lazy"
-                                    className="w-20 h-16 rounded-lg object-cover"
-                                />
-                                <div className="flex-1 min-w-0">
-                                    <h3 className="font-semibold text-gray-900 truncate">{course.title}</h3>
-                                    <p className="text-sm text-gray-500">{course.teacher}</p>
-                                    <div className="flex items-center gap-4 mt-2">
-                                        <div className="flex-1">
-                                            <div className="h-2 rounded-full bg-gray-100 overflow-hidden">
-                                                <motion.div
-                                                    initial={{ width: 0 }}
-                                                    animate={{ width: `${course.progress}%` }}
-                                                    transition={{ delay: 0.5, duration: 0.8 }}
-                                                    className="h-full rounded-full bg-emerald-500"
-                                                />
-                                            </div>
+                        {student.enrollments && student.enrollments.length > 0 ? (
+                            student.enrollments.map((enrollment: any, index: number) => (
+                                <motion.div
+                                    key={enrollment.id}
+                                    initial={{ opacity: 0, x: -20 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    transition={{ delay: 0.1 * index }}
+                                    className="flex gap-4 p-4 rounded-xl border border-gray-100 hover:border-emerald-200 transition-colors"
+                                >
+                                    <div className="w-20 h-16 rounded-lg bg-gray-100 flex items-center justify-center overflow-hidden flex-shrink-0">
+                                        {enrollment.batch?.course?.thumbnail_url ? (
+                                            <img
+                                                src={enrollment.batch.course.thumbnail_url}
+                                                alt={enrollment.batch.course.name}
+                                                className="w-full h-full object-cover"
+                                            />
+                                        ) : (
+                                            <BookOpen className="w-8 h-8 text-gray-400" />
+                                        )}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <h3 className="font-semibold text-gray-900 truncate">
+                                            {enrollment.batch?.course?.name || 'Unknown Course'}
+                                        </h3>
+                                        <p className="text-sm text-gray-500">
+                                            Batch: {enrollment.batch?.name} • {enrollment.batch?.teacher?.profile?.full_name || 'No Teacher'}
+                                        </p>
+                                        <div className="flex items-center gap-2 mt-2">
+                                            <span className={`text-xs px-2 py-0.5 rounded-full ${enrollment.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
+                                                }`}>
+                                                {enrollment.status}
+                                            </span>
                                         </div>
-                                        <span className="text-sm font-medium text-gray-600">
-                                            {course.progress}%
-                                        </span>
                                     </div>
-                                </div>
-                                <div className="text-right">
-                                    <div className="flex items-center gap-1">
-                                        <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
-                                        <span className="font-bold text-gray-900">{course.grade}</span>
-                                    </div>
-                                    <p className="text-xs text-gray-500">Grade</p>
-                                </div>
-                            </motion.div>
-                        ))}
+                                </motion.div>
+                            ))
+                        ) : (
+                            <div className="text-center py-8 text-gray-500">
+                                <p>No enrolled courses yet.</p>
+                            </div>
+                        )}
                     </div>
                 </motion.div>
 
-                {/* Activity Timeline */}
+                {/* Activity Timeline (Placeholder for now) */}
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -397,96 +334,11 @@ export default function StudentProfilePage() {
                     className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6"
                 >
                     <h2 className="text-xl font-bold text-gray-900 mb-6">Recent Activity</h2>
-
-                    <div className="space-y-4">
-                        {activityTimeline.map((activity, index) => (
-                            <motion.div
-                                key={activity.id}
-                                initial={{ opacity: 0, x: 20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: 0.1 * index }}
-                                className="flex gap-3"
-                            >
-                                <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center flex-shrink-0">
-                                    <activity.icon className="w-4 h-4 text-emerald-500" />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-medium text-gray-900 truncate">
-                                        {activity.title}
-                                    </p>
-                                    <p className="text-xs text-gray-500">{activity.course}</p>
-                                    <p className="text-xs text-gray-400 mt-1">
-                                        {new Date(activity.date).toLocaleDateString('en-US', {
-                                            month: 'short',
-                                            day: 'numeric',
-                                        })}
-                                    </p>
-                                </div>
-                            </motion.div>
-                        ))}
+                    <div className="text-center py-8 text-gray-500">
+                        <p>No recent activity recorded.</p>
                     </div>
-
-                    <button className="w-full mt-6 py-3 text-sm font-medium text-emerald-500 hover:text-emerald-600 transition-colors">
-                        View All Activity →
-                    </button>
                 </motion.div>
             </div>
-
-            {/* Overall Progress */}
-            <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4 }}
-                className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6"
-            >
-                <h2 className="text-xl font-bold text-gray-900 mb-4">Overall Progress</h2>
-                <div className="flex items-center gap-6">
-                    <div className="relative w-24 h-24">
-                        <svg className="w-full h-full -rotate-90">
-                            <circle
-                                cx="48"
-                                cy="48"
-                                r="40"
-                                fill="none"
-                                stroke="#f3f4f6"
-                                strokeWidth="8"
-                            />
-                            <motion.circle
-                                cx="48"
-                                cy="48"
-                                r="40"
-                                fill="none"
-                                stroke="#10b981"
-                                strokeWidth="8"
-                                strokeLinecap="round"
-                                initial={{ strokeDasharray: '0 251' }}
-                                animate={{
-                                    strokeDasharray: `${(progressPercent / 100) * 251} 251`,
-                                }}
-                                transition={{ delay: 0.5, duration: 1 }}
-                            />
-                        </svg>
-                        <div className="absolute inset-0 flex items-center justify-center">
-                            <span className="text-xl font-bold text-gray-900">{progressPercent}%</span>
-                        </div>
-                    </div>
-                    <div className="flex-1">
-                        <p className="text-gray-600 mb-2">
-                            <span className="font-bold text-gray-900">{student.completedLessons}</span> of{' '}
-                            <span className="font-bold text-gray-900">{student.totalLessons}</span> lessons
-                            completed
-                        </p>
-                        <div className="h-3 rounded-full bg-gray-100 overflow-hidden">
-                            <motion.div
-                                initial={{ width: 0 }}
-                                animate={{ width: `${progressPercent}%` }}
-                                transition={{ delay: 0.5, duration: 0.8 }}
-                                className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-500"
-                            />
-                        </div>
-                    </div>
-                </div>
-            </motion.div>
         </div>
     );
 }

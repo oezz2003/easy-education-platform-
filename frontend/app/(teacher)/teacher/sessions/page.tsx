@@ -15,97 +15,58 @@ import {
     Edit,
     Trash2,
     ChevronLeft,
-    ChevronRight
+    ChevronRight,
+    Loader2
 } from 'lucide-react';
-
-// Mock sessions data
-const mySessions = [
-    {
-        id: '1',
-        title: 'Algebra Live Q&A',
-        course: 'Advanced Algebra',
-        date: '2024-03-15',
-        time: '10:00 AM',
-        duration: '1h 30m',
-        attendees: 45,
-        maxAttendees: 50,
-        status: 'upcoming',
-        recurring: true,
-    },
-    {
-        id: '2',
-        title: 'Calculus Problem Solving',
-        course: 'Calculus Mastery',
-        date: '2024-03-15',
-        time: '2:00 PM',
-        duration: '1h',
-        attendees: 32,
-        maxAttendees: 40,
-        status: 'upcoming',
-        recurring: false,
-    },
-    {
-        id: '3',
-        title: 'Geometry Review Session',
-        course: 'Geometry Basics',
-        date: '2024-03-14',
-        time: '4:00 PM',
-        duration: '1h',
-        attendees: 28,
-        maxAttendees: 35,
-        status: 'completed',
-        recurring: false,
-    },
-    {
-        id: '4',
-        title: 'Mid-term Preparation',
-        course: 'Advanced Algebra',
-        date: '2024-03-13',
-        time: '11:00 AM',
-        duration: '2h',
-        attendees: 50,
-        maxAttendees: 50,
-        status: 'completed',
-        recurring: false,
-    },
-    {
-        id: '5',
-        title: 'Weekly Doubt Clearing',
-        course: 'Calculus Mastery',
-        date: '2024-03-12',
-        time: '3:00 PM',
-        duration: '1h',
-        attendees: 22,
-        maxAttendees: 40,
-        status: 'completed',
-        recurring: true,
-    },
-];
+import { useSessions } from '@/hooks/useSessions';
 
 const statusColors = {
+    scheduled: 'bg-blue-100 text-blue-700',
     upcoming: 'bg-blue-100 text-blue-700',
     live: 'bg-red-100 text-red-700',
     completed: 'bg-gray-100 text-gray-600',
+    cancelled: 'bg-red-100 text-red-600',
 };
 
 export default function LiveSessionsPage() {
     const [searchQuery, setSearchQuery] = useState('');
-    const [filter, setFilter] = useState<'all' | 'upcoming' | 'completed'>('all');
+    const [filter, setFilter] = useState<'all' | 'scheduled' | 'completed'>('all');
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 5;
 
-    // Filter sessions
+    // Fetch real data from hook
+    const { sessions: rawSessions, isLoading, error, refetch } = useSessions({
+        status: filter !== 'all' ? filter : undefined,
+    });
+
+    // Transform sessions data (hook returns joined data but typed as LiveSession)
+    const mySessions = rawSessions.map(s => {
+        const session = s as any; // Runtime data includes joined course
+        return {
+            id: s.id,
+            title: s.title || 'Untitled Session',
+            course: session.course?.name || 'General',
+            date: s.session_date || '',
+            time: s.start_time || '',
+            duration: s.duration_minutes ? `${s.duration_minutes}m` : '1h',
+            attendees: session.attendance?.length || 0,
+            maxAttendees: s.max_attendees || 50,
+            status: s.status === 'scheduled' ? 'upcoming' : s.status,
+            recurring: s.is_recurring || false,
+        };
+    });
+
+    // Filter sessions (search client-side, status from hook)
     const filteredSessions = mySessions.filter((session) => {
         const matchesSearch = session.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
             session.course.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesFilter = filter === 'all' || session.status === filter;
-        return matchesSearch && matchesFilter;
+        return matchesSearch;
     });
 
     // Stats
     const stats = {
         total: mySessions.length,
-        upcoming: mySessions.filter(s => s.status === 'upcoming').length,
+        upcoming: mySessions.filter(s => s.status === 'upcoming' || s.status === 'scheduled').length,
         completed: mySessions.filter(s => s.status === 'completed').length,
         totalAttendees: mySessions.reduce((acc, s) => acc + s.attendees, 0),
     };
@@ -116,6 +77,28 @@ export default function LiveSessionsPage() {
         (currentPage - 1) * itemsPerPage,
         currentPage * itemsPerPage
     );
+
+    if (isLoading) {
+        return (
+            <div className="flex items-center justify-center min-h-[400px]">
+                <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[400px] text-center">
+                <p className="text-red-500 mb-4">{error}</p>
+                <button
+                    onClick={refetch}
+                    className="px-4 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600"
+                >
+                    Try Again
+                </button>
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-6">

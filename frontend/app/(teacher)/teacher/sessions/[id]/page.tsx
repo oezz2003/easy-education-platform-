@@ -16,6 +16,7 @@ import {
     MessageCircle,
     Eye
 } from 'lucide-react';
+import { UserAvatar } from '@/app/components/shared/UserAvatar';
 
 // Mock session data
 const sessionData = {
@@ -35,11 +36,11 @@ const sessionData = {
 
 // Mock attendees
 const attendees = [
-    { id: 1, name: 'Omar Ahmed', avatar: 'https://i.pravatar.cc/150?img=1', status: 'attending' },
-    { id: 2, name: 'Sara Hassan', avatar: 'https://i.pravatar.cc/150?img=5', status: 'attending' },
-    { id: 3, name: 'Khaled Mohamed', avatar: 'https://i.pravatar.cc/150?img=3', status: 'maybe' },
-    { id: 4, name: 'Fatma Ali', avatar: 'https://i.pravatar.cc/150?img=9', status: 'attending' },
-    { id: 5, name: 'Ahmed Ibrahim', avatar: 'https://i.pravatar.cc/150?img=12', status: 'attending' },
+    { id: 1, name: 'Omar Ahmed', avatar: null, status: 'attending' },
+    { id: 2, name: 'Sara Hassan', avatar: null, status: 'attending' },
+    { id: 3, name: 'Khaled Mohamed', avatar: null, status: 'maybe' },
+    { id: 4, name: 'Fatma Ali', avatar: null, status: 'attending' },
+    { id: 5, name: 'Ahmed Ibrahim', avatar: null, status: 'attending' },
 ];
 
 // Mock past recordings (for completed sessions)
@@ -195,10 +196,10 @@ export default function SessionDetailPage() {
                             transition={{ delay: 0.3 + index * 0.05 }}
                             className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl"
                         >
-                            <img
+                            <UserAvatar
                                 src={attendee.avatar}
-                                alt={attendee.name}
-                                className="w-10 h-10 rounded-full object-cover"
+                                name={attendee.name}
+                                className="w-10 h-10 rounded-full"
                             />
                             <div className="flex-1 min-w-0">
                                 <p className="font-medium text-gray-900 truncate">{attendee.name}</p>

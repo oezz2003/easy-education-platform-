@@ -17,97 +17,12 @@ import {
     Eye,
     Edit,
     GraduationCap,
-    Users
+    Users,
+    Loader2
 } from 'lucide-react';
 import AddStudentModal from '../../../components/admin/AddStudentModal';
-
-// Mock students data
-const mockStudents = [
-    {
-        id: '1',
-        name: 'Ahmed Mohamed',
-        email: 'ahmed.m@email.com',
-        phone: '+20 123 456 7890',
-        avatar: 'https://i.pravatar.cc/150?img=11',
-        level: 'Primary',
-        levelId: 'primary',
-        enrolledCourses: 5,
-        enrollmentDate: '2024-01-15',
-        status: 'active',
-        parentName: 'Mohamed Hassan',
-        parentPhone: '+20 111 222 3333',
-    },
-    {
-        id: '2',
-        name: 'Sara Ali',
-        email: 'sara.ali@email.com',
-        phone: '+20 100 200 3000',
-        avatar: 'https://i.pravatar.cc/150?img=5',
-        level: 'Preparatory',
-        levelId: 'preparatory',
-        enrolledCourses: 3,
-        enrollmentDate: '2024-02-20',
-        status: 'active',
-        parentName: 'Ali Ibrahim',
-        parentPhone: '+20 111 333 4444',
-    },
-    {
-        id: '3',
-        name: 'Omar Khaled',
-        email: 'omar.k@email.com',
-        phone: '+20 150 250 3500',
-        avatar: 'https://i.pravatar.cc/150?img=12',
-        level: 'Secondary',
-        levelId: 'secondary',
-        enrolledCourses: 7,
-        enrollmentDate: '2024-03-10',
-        status: 'active',
-        parentName: 'Khaled Ahmed',
-        parentPhone: '+20 155 266 3777',
-    },
-    {
-        id: '4',
-        name: 'Fatma Nour',
-        email: 'fatma.n@email.com',
-        phone: '+20 180 280 3800',
-        avatar: 'https://i.pravatar.cc/150?img=9',
-        level: 'Primary',
-        levelId: 'primary',
-        enrolledCourses: 4,
-        enrollmentDate: '2024-01-25',
-        status: 'inactive',
-        parentName: 'Nour Salah',
-        parentPhone: '+20 166 277 3888',
-    },
-    {
-        id: '5',
-        name: 'Youssef Ibrahim',
-        email: 'youssef.i@email.com',
-        phone: '+20 190 290 3900',
-        avatar: 'https://i.pravatar.cc/150?img=15',
-        level: 'Preparatory',
-        levelId: 'preparatory',
-        enrolledCourses: 6,
-        enrollmentDate: '2024-04-05',
-        status: 'active',
-        parentName: 'Ibrahim Mahmoud',
-        parentPhone: '+20 177 288 3999',
-    },
-    {
-        id: '6',
-        name: 'Laila Hassan',
-        email: 'laila.h@email.com',
-        phone: '+20 195 295 3950',
-        avatar: 'https://i.pravatar.cc/150?img=20',
-        level: 'Secondary',
-        levelId: 'secondary',
-        enrolledCourses: 8,
-        enrollmentDate: '2024-05-12',
-        status: 'active',
-        parentName: 'Hassan Farid',
-        parentPhone: '+20 188 299 3111',
-    },
-];
+import { UserAvatar } from '@/app/components/shared/UserAvatar';
+import { useStudents } from '@/hooks/useStudents';
 
 const levels = [
     { id: 'all', name: 'All Levels' },
@@ -121,7 +36,7 @@ const statusColors = {
     inactive: 'bg-gray-100 text-gray-600',
 };
 
-const levelColors = {
+const levelColors: Record<string, string> = {
     primary: 'bg-emerald-50 text-emerald-600 border-emerald-200',
     preparatory: 'bg-blue-50 text-blue-600 border-blue-200',
     secondary: 'bg-purple-50 text-purple-600 border-purple-200',
@@ -135,14 +50,46 @@ export default function StudentsPage() {
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 5;
 
-    // Filter students
-    const filteredStudents = mockStudents.filter((student) => {
-        const matchesSearch =
-            student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            student.email.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesLevel = selectedLevel === 'all' || student.levelId === selectedLevel;
-        return matchesSearch && matchesLevel;
-    });
+    // Use real data from hook
+    const { students: rawStudents, isLoading, error, refetch, deleteStudent, createStudent } = useStudents(
+        selectedLevel !== 'all' || searchQuery
+            ? {
+                level: selectedLevel !== 'all' ? selectedLevel as 'primary' | 'preparatory' | 'secondary' : undefined,
+                search: searchQuery || undefined,
+            }
+            : undefined
+    );
+
+    // Handler for adding new student
+    const handleAddStudent = async (data: { name: string; email: string; phone: string; level: string; parentPhone: string }) => {
+        const result = await createStudent({
+            name: data.name,
+            email: data.email,
+            phone: data.phone,
+            level: data.level as 'primary' | 'preparatory' | 'secondary',
+            parentPhone: data.parentPhone,
+        });
+        return result;
+    };
+
+    // Transform data to match UI structure
+    const studentsData = rawStudents.map(s => ({
+        id: s.id,
+        name: s.profile?.full_name || 'Unknown',
+        email: s.profile?.email || '',
+        phone: s.profile?.phone || '',
+        avatar: s.profile?.avatar_url,
+        level: s.level ? s.level.charAt(0).toUpperCase() + s.level.slice(1) : 'Unknown',
+        levelId: s.level || 'primary',
+        enrolledCourses: 0, // Would need separate query
+        enrollmentDate: s.profile?.created_at || '',
+        status: 'active',
+        parentName: '',
+        parentPhone: s.parent_phone || '',
+    }));
+
+    // Filter students (handled by hook)
+    const filteredStudents = studentsData;
 
     // Pagination
     const totalPages = Math.ceil(filteredStudents.length / itemsPerPage);
@@ -164,6 +111,50 @@ export default function StudentsPage() {
             prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]
         );
     };
+
+    // Delete single student
+    const handleDeleteStudent = async (id: string) => {
+        if (confirm('Are you sure you want to delete this student?')) {
+            const result = await deleteStudent(id);
+            if (!result.success) {
+                alert(result.error || 'Failed to delete student');
+            }
+        }
+    };
+
+    // Bulk delete students
+    const handleBulkDelete = async () => {
+        if (confirm(`Are you sure you want to delete ${selectedStudents.length} students?`)) {
+            for (const id of selectedStudents) {
+                await deleteStudent(id);
+            }
+            setSelectedStudents([]);
+        }
+    };
+
+    // Loading state
+    if (isLoading) {
+        return (
+            <div className="flex items-center justify-center min-h-[400px]">
+                <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
+            </div>
+        );
+    }
+
+    // Error state
+    if (error) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[400px] text-center">
+                <p className="text-red-500 mb-4">{error}</p>
+                <button
+                    onClick={refetch}
+                    className="px-4 py-2 bg-emerald-500 text-white rounded-xl hover:bg-emerald-600"
+                >
+                    Try Again
+                </button>
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-6">
@@ -252,7 +243,10 @@ export default function StudentsPage() {
                             <span className="text-sm text-gray-500">
                                 {selectedStudents.length} selected
                             </span>
-                            <button className="p-2 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 transition-colors">
+                            <button
+                                onClick={handleBulkDelete}
+                                className="p-2 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 transition-colors"
+                            >
                                 <Trash2 className="w-5 h-5" />
                             </button>
                             <button className="p-2 rounded-lg bg-blue-50 text-blue-500 hover:bg-blue-100 transition-colors">
@@ -325,11 +319,10 @@ export default function StudentsPage() {
                                     <td className="px-6 py-4">
                                         <Link href={`/admin/students/${student.id}`}>
                                             <div className="flex items-center gap-3 group">
-                                                <img
+                                                <UserAvatar
                                                     src={student.avatar}
-                                                    alt={student.name}
-                                                    loading="lazy"
-                                                    className="w-10 h-10 rounded-full object-cover"
+                                                    name={student.name}
+                                                    className="w-10 h-10 rounded-full"
                                                 />
                                                 <div>
                                                     <p className="font-semibold text-gray-900 group-hover:text-emerald-500 transition-colors">
@@ -406,6 +399,7 @@ export default function StudentsPage() {
                                             <motion.button
                                                 whileHover={{ scale: 1.1 }}
                                                 whileTap={{ scale: 0.9 }}
+                                                onClick={() => handleDeleteStudent(student.id)}
                                                 className="p-2 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 transition-colors"
                                             >
                                                 <Trash2 className="w-4 h-4" />
@@ -482,7 +476,7 @@ export default function StudentsPage() {
             </motion.div>
 
             {/* Add Student Modal */}
-            <AddStudentModal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} />
+            <AddStudentModal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} onSubmit={handleAddStudent} />
         </div>
     );
 }

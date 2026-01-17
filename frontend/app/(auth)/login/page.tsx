@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/hooks/useAuth';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Eye, EyeOff, ArrowRight, Sparkles, Mail, Lock } from 'lucide-react';
 import Link from 'next/link';
@@ -79,16 +80,31 @@ export default function LoginPage() {
         admin: '/admin/dashboard',
     };
 
+    const { signIn, isLoading: authLoading } = useAuth();
+    const [error, setError] = useState<string | null>(null);
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!canSubmit) return;
 
         setIsSubmitting(true);
-        // Simulate API call for login
-        await new Promise((resolve) => setTimeout(resolve, 1500));
+        setError(null);
 
-        // Redirect to appropriate dashboard based on selected role
-        router.push(dashboardRoutes[role]);
+        try {
+            const { success, error } = await signIn(email, password);
+
+            if (success) {
+                // Redirect handled by useAuth or middleware, but we can force it here too
+                // The middleware should redirect to dashboard if authenticated
+                router.push(dashboardRoutes[role]);
+            } else {
+                setError(error || 'Failed to login');
+                setIsSubmitting(false);
+            }
+        } catch (err) {
+            setError('An unexpected error occurred');
+            setIsSubmitting(false);
+        }
     };
 
     return (
@@ -256,6 +272,17 @@ export default function LoginPage() {
                             </AnimatePresence>
 
                             <form onSubmit={handleSubmit}>
+                                {/* Error Message */}
+                                {error && (
+                                    <motion.div
+                                        initial={{ opacity: 0, y: -10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm text-center"
+                                    >
+                                        {error}
+                                    </motion.div>
+                                )}
+
                                 {/* Email Input */}
                                 <div className="mb-4">
                                     <label className="block text-sm font-medium text-gray-700 mb-2">

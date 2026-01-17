@@ -11,43 +11,12 @@ import {
     Clock,
     Award,
     Lock,
-    TrendingUp
+    TrendingUp,
+    Loader2
 } from 'lucide-react';
-
-// Level data
-const levelData = {
-    current: 12,
-    xp: 2450,
-    xpToNext: 3000,
-    title: 'Rising Scholar',
-};
-
-// Unlocked badges
-const unlockedBadges = [
-    { id: 1, name: 'First Steps', description: 'Complete your first lesson', icon: '🎯', color: 'emerald', xp: 25, date: '2024-01-15' },
-    { id: 2, name: 'Quick Learner', description: 'Complete 10 lessons in a day', icon: '⚡', color: 'amber', xp: 100, date: '2024-01-20' },
-    { id: 3, name: 'Week Warrior', description: 'Maintain a 7-day streak', icon: '🔥', color: 'orange', xp: 75, date: '2024-02-01' },
-    { id: 4, name: 'Math Whiz', description: 'Score 100% on a math quiz', icon: '🧮', color: 'purple', xp: 150, date: '2024-02-10' },
-    { id: 5, name: 'Bookworm', description: 'Complete an entire course', icon: '📚', color: 'blue', xp: 200, date: '2024-02-15' },
-    { id: 6, name: 'Early Bird', description: 'Start learning before 7 AM', icon: '🌅', color: 'pink', xp: 50, date: '2024-02-20' },
-];
-
-// Locked badges
-const lockedBadges = [
-    { id: 7, name: 'Master Scholar', description: 'Complete 5 courses', icon: '🎓', color: 'gray', xp: 500, progress: 1, total: 5 },
-    { id: 8, name: 'Month Champion', description: '30-day learning streak', icon: '👑', color: 'gray', xp: 300, progress: 7, total: 30 },
-    { id: 9, name: 'Perfectionist', description: 'Get 5 perfect quiz scores', icon: '💎', color: 'gray', xp: 250, progress: 2, total: 5 },
-    { id: 10, name: 'Social Learner', description: 'Attend 10 live sessions', icon: '🎥', color: 'gray', xp: 200, progress: 3, total: 10 },
-];
-
-// Leaderboard
-const leaderboard = [
-    { rank: 1, name: 'Sara Hassan', xp: 5420, avatar: 'https://i.pravatar.cc/150?img=5', level: 18 },
-    { rank: 2, name: 'Ahmed Mohamed', xp: 4890, avatar: 'https://i.pravatar.cc/150?img=12', level: 16 },
-    { rank: 3, name: 'Omar Ahmed', xp: 2450, avatar: 'https://i.pravatar.cc/150?img=33', level: 12, isUser: true },
-    { rank: 4, name: 'Fatma Ali', xp: 2100, avatar: 'https://i.pravatar.cc/150?img=9', level: 11 },
-    { rank: 5, name: 'Khaled Ibrahim', xp: 1850, avatar: 'https://i.pravatar.cc/150?img=3', level: 10 },
-];
+import { useAuth } from '@/hooks/useAuth';
+import { useAchievements } from '@/hooks/useAchievements';
+import { useStudents } from '@/hooks/useStudents';
 
 const colorClasses: Record<string, string> = {
     emerald: 'from-emerald-400 to-green-500',
@@ -57,10 +26,82 @@ const colorClasses: Record<string, string> = {
     blue: 'from-blue-400 to-cyan-500',
     pink: 'from-pink-400 to-rose-500',
     gray: 'from-gray-300 to-gray-400',
+    streak: 'from-orange-400 to-red-500',
+    course: 'from-blue-400 to-cyan-500',
+    session: 'from-purple-400 to-pink-500',
+    social: 'from-pink-400 to-rose-500',
+    special: 'from-amber-400 to-yellow-500',
 };
 
 export default function AchievementsPage() {
+    const { profile, isLoading: authLoading } = useAuth();
+    const { achievements, studentAchievements, isLoading: achievementsLoading } = useAchievements();
+    const { students } = useStudents();
+
+    const isLoading = authLoading || achievementsLoading;
+
+    // Get current student data
+    const currentStudent = students.find(s => s.profile?.id === profile?.id);
+    const xp = currentStudent?.xp_points || 0;
+    const streak = currentStudent?.streak_days || 0;
+
+    // Calculate level from XP
+    const level = Math.floor(xp / 250) + 1;
+    const xpToNext = level * 250;
+
+    const levelData = {
+        current: level,
+        xp: xp,
+        xpToNext: xpToNext,
+        title: level >= 15 ? 'Master Scholar' : level >= 10 ? 'Rising Scholar' : 'Learner',
+    };
+
+    // Transform achievements
+    const unlockedBadges = studentAchievements.map(sa => {
+        const ach = achievements.find(a => a.id === sa.achievement_id);
+        return {
+            id: sa.id,
+            name: ach?.name || 'Badge',
+            description: ach?.description || '',
+            icon: '🏆',
+            color: ach?.category || 'emerald',
+            xp: ach?.xp_reward || 0,
+            date: sa.earned_at?.split('T')[0] || '',
+        };
+    });
+
+    const lockedBadges = achievements
+        .filter(a => !studentAchievements.some(sa => sa.achievement_id === a.id))
+        .slice(0, 4)
+        .map(a => ({
+            id: a.id,
+            name: a.name,
+            description: a.description || '',
+            icon: '🔒',
+            color: 'gray',
+            xp: a.xp_reward,
+            progress: 0,
+            total: a.requirement_value,
+        }));
+
+    // Leaderboard placeholder
+    const leaderboard = [
+        { rank: 1, name: 'Sara Hassan', xp: 5420, avatar: 'https://i.pravatar.cc/150?img=5', level: 18 },
+        { rank: 2, name: 'Ahmed Mohamed', xp: 4890, avatar: 'https://i.pravatar.cc/150?img=12', level: 16 },
+        { rank: 3, name: profile?.full_name || 'You', xp: xp, avatar: profile?.avatar_url || 'https://i.pravatar.cc/150?img=33', level: level, isUser: true },
+        { rank: 4, name: 'Fatma Ali', xp: 2100, avatar: 'https://i.pravatar.cc/150?img=9', level: 11 },
+        { rank: 5, name: 'Khaled Ibrahim', xp: 1850, avatar: 'https://i.pravatar.cc/150?img=3', level: 10 },
+    ];
+
     const xpProgress = (levelData.xp / levelData.xpToNext) * 100;
+
+    if (isLoading) {
+        return (
+            <div className="flex items-center justify-center min-h-[400px]">
+                <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-6">

@@ -16,6 +16,7 @@ import {
     CheckCircle,
     XCircle
 } from 'lucide-react';
+import { UserAvatar } from '@/app/components/shared/UserAvatar';
 
 // Mock student data
 const studentData = {
@@ -23,7 +24,7 @@ const studentData = {
     name: 'Omar Ahmed',
     email: 'omar.ahmed@email.com',
     phone: '+20 100 123 4567',
-    avatar: 'https://i.pravatar.cc/150?img=1',
+    avatar: null,
     joinedAt: '2024-01-15',
     lastActive: '2 hours ago',
     overallProgress: 78,
@@ -104,10 +105,10 @@ export default function StudentDetailPage() {
                     className="bg-white rounded-[2rem] p-6 shadow-lg border border-gray-100"
                 >
                     <div className="text-center mb-6">
-                        <img
+                        <UserAvatar
                             src={studentData.avatar}
-                            alt={studentData.name}
-                            className="w-24 h-24 rounded-full mx-auto mb-4 object-cover ring-4 ring-blue-100"
+                            name={studentData.name}
+                            className="w-24 h-24 rounded-full mx-auto mb-4 ring-4 ring-blue-100"
                         />
                         <h2 className="text-xl font-bold text-gray-900">{studentData.name}</h2>
                         <span className="inline-block px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-sm font-medium mt-2">

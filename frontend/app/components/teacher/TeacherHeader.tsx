@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Bell, ChevronDown, Menu, Video } from 'lucide-react';
 import SearchBar from '../shared/SearchBar';
+import { UserAvatar } from '../shared/UserAvatar';
 
 interface TeacherHeaderProps {
     onMenuClick: () => void;
@@ -107,10 +108,10 @@ export default function TeacherHeader({ onMenuClick }: TeacherHeaderProps) {
                             onClick={() => setShowProfileMenu(!showProfileMenu)}
                             className="flex items-center gap-3 p-2 pr-3 rounded-xl hover:bg-gray-100 transition-colors"
                         >
-                            <img
-                                src="https://i.pravatar.cc/150?img=11"
-                                alt="Teacher"
-                                className="w-9 h-9 rounded-xl object-cover"
+                            <UserAvatar
+                                src={null}
+                                name="Ahmed Hassan"
+                                className="w-9 h-9 rounded-xl"
                             />
                             <div className="hidden md:block text-left">
                                 <p className="text-sm font-semibold text-gray-900">Ahmed Hassan</p>

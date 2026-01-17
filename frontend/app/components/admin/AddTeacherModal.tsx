@@ -7,6 +7,7 @@ import { X, User, Mail, Phone, BookOpen, Upload, Check, FileText, GraduationCap 
 interface AddTeacherModalProps {
     isOpen: boolean;
     onClose: () => void;
+    onSubmit?: (data: { name: string; email: string; phone: string; subject: string; bio: string }) => Promise<{ success: boolean; error?: string }>;
 }
 
 const subjects = [
@@ -18,7 +19,7 @@ const subjects = [
     { id: 'art', name: 'Art', icon: '/ASSITS/art.png' },
 ];
 
-export default function AddTeacherModal({ isOpen, onClose }: AddTeacherModalProps) {
+export default function AddTeacherModal({ isOpen, onClose, onSubmit }: AddTeacherModalProps) {
     const [formData, setFormData] = useState({
         name: '',
         email: '',
@@ -29,6 +30,7 @@ export default function AddTeacherModal({ isOpen, onClose }: AddTeacherModalProp
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         setFormData((prev) => ({
@@ -40,26 +42,47 @@ export default function AddTeacherModal({ isOpen, onClose }: AddTeacherModalProp
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSubmitting(true);
+        setError(null);
 
-        // Simulate API call
-        await new Promise((resolve) => setTimeout(resolve, 1500));
+        try {
+            if (onSubmit) {
+                // Use real Supabase callback
+                const result = await onSubmit({
+                    name: formData.name,
+                    email: formData.email,
+                    phone: formData.phone,
+                    subject: formData.subject,
+                    bio: formData.bio,
+                });
+                if (!result.success) {
+                    setError(result.error || 'Failed to add teacher');
+                    setIsSubmitting(false);
+                    return;
+                }
+            } else {
+                // Fallback mock
+                await new Promise((resolve) => setTimeout(resolve, 1500));
+            }
 
-        setIsSubmitting(false);
-        setIsSuccess(true);
+            setIsSubmitting(false);
+            setIsSuccess(true);
 
-        // Reset and close after success
-        setTimeout(() => {
-            setIsSuccess(false);
-            setFormData({
-                name: '',
-                email: '',
-                phone: '',
-                subject: '',
-                bio: '',
-                experience: '',
-            });
-            onClose();
-        }, 1500);
+            setTimeout(() => {
+                setIsSuccess(false);
+                setFormData({
+                    name: '',
+                    email: '',
+                    phone: '',
+                    subject: '',
+                    bio: '',
+                    experience: '',
+                });
+                onClose();
+            }, 1500);
+        } catch (err) {
+            setError('An error occurred');
+            setIsSubmitting(false);
+        }
     };
 
     const isValid =
@@ -218,8 +241,8 @@ export default function AddTeacherModal({ isOpen, onClose }: AddTeacherModalProp
                                                             setFormData((prev) => ({ ...prev, subject: subject.id }))
                                                         }
                                                         className={`p-3 rounded-xl border-2 flex flex-col items-center gap-2 transition-all ${formData.subject === subject.id
-                                                                ? 'border-blue-500 bg-blue-50'
-                                                                : 'border-gray-200 hover:border-gray-300'
+                                                            ? 'border-blue-500 bg-blue-50'
+                                                            : 'border-gray-200 hover:border-gray-300'
                                                             }`}
                                                     >
                                                         <img
@@ -229,8 +252,8 @@ export default function AddTeacherModal({ isOpen, onClose }: AddTeacherModalProp
                                                         />
                                                         <span
                                                             className={`text-xs font-medium ${formData.subject === subject.id
-                                                                    ? 'text-blue-600'
-                                                                    : 'text-gray-600'
+                                                                ? 'text-blue-600'
+                                                                : 'text-gray-600'
                                                                 }`}
                                                         >
                                                             {subject.name}
@@ -274,8 +297,8 @@ export default function AddTeacherModal({ isOpen, onClose }: AddTeacherModalProp
                                         whileHover={{ scale: isValid ? 1.02 : 1 }}
                                         whileTap={{ scale: isValid ? 0.98 : 1 }}
                                         className={`w-full py-4 rounded-xl font-bold text-lg transition-all flex items-center justify-center gap-2 ${isValid
-                                                ? 'bg-blue-500 hover:bg-blue-600 text-white shadow-lg hover:shadow-xl'
-                                                : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                            ? 'bg-blue-500 hover:bg-blue-600 text-white shadow-lg hover:shadow-xl'
+                                            : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                                             }`}
                                     >
                                         {isSubmitting ? (

@@ -1,9 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight, ArrowLeft, Check, Eye, EyeOff, Sparkles, Star } from 'lucide-react';
 import Link from 'next/link';
+import { useAuth } from '@/hooks/useAuth';
+import { getSupabaseClient } from '@/lib/supabase/client';
 
 // Step data
 const levels = [
@@ -297,13 +300,15 @@ function StepThree({
     onChange,
     onSubmit,
     onBack,
-    isSubmitting
+    isSubmitting,
+    error
 }: {
     data: FormData;
     onChange: (updates: Partial<FormData>) => void;
     onSubmit: () => void;
     onBack: () => void;
     isSubmitting: boolean;
+    error: string | null;
 }) {
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirm, setShowConfirm] = useState(false);
@@ -360,6 +365,17 @@ function StepThree({
                         إيميلك عشان تفتح بوابة دروسك!
                     </p>
                 </div>
+
+                {/* Error Message */}
+                {error && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm text-center"
+                    >
+                        {error}
+                    </motion.div>
+                )}
 
                 {/* Email Input */}
                 <div className="mb-4">
@@ -478,6 +494,10 @@ function StepThree({
 
 // Main Signup Page
 export default function SignupPage() {
+    const router = useRouter();
+    const { signUp } = useAuth();
+    const supabase = getSupabaseClient();
+
     const [step, setStep] = useState(1);
     const [formData, setFormData] = useState<FormData>({
         name: '',
@@ -491,6 +511,7 @@ export default function SignupPage() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showStars, setShowStars] = useState(false);
     const [isComplete, setIsComplete] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     const updateForm = (updates: Partial<FormData>) => {
         setFormData((prev) => ({ ...prev, ...updates }));
@@ -511,12 +532,48 @@ export default function SignupPage() {
     const handleSubmit = async () => {
         setIsSubmitting(true);
         setShowStars(true);
+        setError(null);
 
-        // Simulate API call
-        await new Promise((resolve) => setTimeout(resolve, 1500));
+        try {
+            // 1. Create auth user with role and name in metadata
+            const { success, error: signUpError, data } = await signUp(
+                formData.email,
+                formData.password,
+                'student',
+                formData.name
+            );
 
-        setIsSubmitting(false);
-        setIsComplete(true);
+            if (!success || signUpError) {
+                setError(signUpError || 'Failed to create account');
+                setIsSubmitting(false);
+                setShowStars(false);
+                return;
+            }
+
+            // 2. Update student_profiles with level and phone
+            // The trigger already created the student_profile, we just need to update it
+            if (data?.user) {
+                const { error: updateError } = await supabase
+                    .from('student_profiles')
+                    .update({
+                        level: formData.level,
+                        parent_phone: `${formData.countryCode}${formData.phone}`,
+                    })
+                    .eq('user_id', data.user.id);
+
+                if (updateError) {
+                    console.warn('Could not update student profile:', updateError);
+                    // Not a critical error, continue anyway
+                }
+            }
+
+            setIsSubmitting(false);
+            setIsComplete(true);
+        } catch (err) {
+            setError('An unexpected error occurred');
+            setIsSubmitting(false);
+            setShowStars(false);
+        }
     };
 
     // Progress percentage
@@ -647,6 +704,7 @@ export default function SignupPage() {
                             onSubmit={handleSubmit}
                             onBack={handleBack}
                             isSubmitting={isSubmitting}
+                            error={error}
                         />
                     )}
                 </AnimatePresence>

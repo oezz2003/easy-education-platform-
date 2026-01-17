@@ -2,75 +2,101 @@
 
 import { motion } from 'framer-motion';
 import Link from 'next/link';
-import { Users, BookOpen, Video, DollarSign, TrendingUp, Clock, Calendar, Play, ChevronRight } from 'lucide-react';
-
-// Stats data
-const stats = [
-    {
-        label: 'Total Students',
-        value: '450',
-        change: '+28 this month',
-        changeType: 'positive',
-        icon: Users,
-        icon3D: '/login-signup assits/student.png',
-        bgColor: 'bg-emerald-50',
-        borderColor: 'border-emerald-400',
-    },
-    {
-        label: 'Active Courses',
-        value: '8',
-        change: '2 drafts',
-        changeType: 'neutral',
-        icon: BookOpen,
-        icon3D: '/ASSITS/folders.png',
-        bgColor: 'bg-purple-50',
-        borderColor: 'border-purple-400',
-    },
-    {
-        label: 'Sessions Today',
-        value: '3',
-        change: 'Next in 45 min',
-        changeType: 'neutral',
-        icon: Video,
-        icon3D: '/ASSITS/play.png',
-        bgColor: 'bg-red-50',
-        borderColor: 'border-red-400',
-    },
-    {
-        label: 'This Month',
-        value: '$2,450',
-        change: '+18%',
-        changeType: 'positive',
-        icon: DollarSign,
-        icon3D: '/ASSITS/cup.png',
-        bgColor: 'bg-amber-50',
-        borderColor: 'border-amber-400',
-    },
-];
-
-// Today's schedule
-const todaySchedule = [
-    { id: 1, title: 'Algebra Fundamentals', time: '10:00 AM', duration: '1h', students: 25, status: 'completed' },
-    { id: 2, title: 'Calculus Review', time: '2:00 PM', duration: '1.5h', students: 18, status: 'upcoming' },
-    { id: 3, title: 'Geometry Basics', time: '4:30 PM', duration: '1h', students: 32, status: 'upcoming' },
-];
-
-// Recent student activity
-const recentActivity = [
-    { type: 'enrollment', message: 'Omar Ahmed enrolled in Algebra 101', time: '10 min ago' },
-    { type: 'submission', message: 'Sara completed assignment "Chapter 3 Quiz"', time: '25 min ago' },
-    { type: 'message', message: 'New question from Khaled about quadratic equations', time: '1 hour ago' },
-    { type: 'completion', message: 'Fatma completed "Trigonometry Course"', time: '2 hours ago' },
-];
-
-// Top performing courses
-const topCourses = [
-    { id: 1, title: 'Advanced Algebra', students: 125, rating: 4.9, earnings: '$2,340' },
-    { id: 2, title: 'Calculus Mastery', students: 98, rating: 4.8, earnings: '$1,890' },
-    { id: 3, title: 'Geometry Basics', students: 87, rating: 4.7, earnings: '$1,420' },
-];
+import { Users, BookOpen, Video, DollarSign, TrendingUp, Clock, Calendar, Play, ChevronRight, Loader2 } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { useSessions } from '@/hooks/useSessions';
+import { useCourses } from '@/hooks/useCourses';
+import { useBatches } from '@/hooks/useBatches';
 
 export default function TeacherDashboard() {
+    const { profile } = useAuth();
+    const { sessions, isLoading: sessionsLoading } = useSessions();
+    const { courses, isLoading: coursesLoading } = useCourses();
+    const { batches } = useBatches();
+
+    const isLoading = sessionsLoading || coursesLoading;
+
+    // Calculate stats from real data
+    const totalStudents = batches.length; // Simplified - would need enrollments query for accurate count
+    const todaySessions = sessions.filter(s => {
+        const today = new Date().toISOString().split('T')[0];
+        return s.session_date === today;
+    });
+
+    const stats = [
+        {
+            label: 'Total Students',
+            value: totalStudents.toString(),
+            change: 'across all batches',
+            changeType: 'neutral',
+            icon: Users,
+            icon3D: '/login-signup assits/student.png',
+            bgColor: 'bg-emerald-50',
+            borderColor: 'border-emerald-400',
+        },
+        {
+            label: 'Active Courses',
+            value: courses.length.toString(),
+            change: `${courses.filter(c => c.status === 'draft').length} drafts`,
+            changeType: 'neutral',
+            icon: BookOpen,
+            icon3D: '/ASSITS/folders.png',
+            bgColor: 'bg-purple-50',
+            borderColor: 'border-purple-400',
+        },
+        {
+            label: 'Sessions Today',
+            value: todaySessions.length.toString(),
+            change: todaySessions.length > 0 ? 'Scheduled' : 'No sessions',
+            changeType: 'neutral',
+            icon: Video,
+            icon3D: '/ASSITS/play.png',
+            bgColor: 'bg-red-50',
+            borderColor: 'border-red-400',
+        },
+        {
+            label: 'Active Batches',
+            value: batches.filter(b => b.status === 'active').length.toString(),
+            change: 'Running now',
+            changeType: 'positive',
+            icon: DollarSign,
+            icon3D: '/ASSITS/cup.png',
+            bgColor: 'bg-amber-50',
+            borderColor: 'border-amber-400',
+        },
+    ];
+
+    // Get upcoming sessions for today's schedule
+    const todaySchedule = todaySessions.slice(0, 3).map(s => ({
+        id: s.id,
+        title: s.title || 'Session',
+        time: s.start_time || '',
+        duration: '1h',
+        students: 0, // Would need to join with batch enrollments
+        status: s.status === 'completed' ? 'completed' : 'upcoming',
+    }));
+
+    // Get recent activity (placeholder - would need activity log table)
+    const recentActivity = [
+        { type: 'session', message: 'Session completed', time: 'Recently' },
+    ];
+
+    // Get top courses
+    const topCourses = courses.slice(0, 3).map(c => ({
+        id: c.id,
+        title: c.name,
+        students: 0,
+        rating: 0,
+        earnings: '$0',
+    }));
+
+    if (isLoading) {
+        return (
+            <div className="flex items-center justify-center min-h-[400px]">
+                <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+            </div>
+        );
+    }
     return (
         <div className="space-y-6">
             {/* Page Header */}

@@ -20,87 +20,10 @@ import {
     Play,
     MoreHorizontal,
     Trash2,
-    Video
+    Video,
+    Loader2
 } from 'lucide-react';
-
-// Mock teacher's courses
-const myCourses = [
-    {
-        id: '1',
-        title: 'Advanced Algebra',
-        description: 'Complete algebra course from basics to advanced topics',
-        thumbnail: 'https://images.unsplash.com/photo-1509228468518-180dd4864904?w=400',
-        level: 'Secondary',
-        studentsCount: 125,
-        lessonsCount: 45,
-        duration: '24h 30m',
-        rating: 4.9,
-        reviewsCount: 89,
-        price: 199,
-        status: 'published',
-        progress: 100,
-    },
-    {
-        id: '2',
-        title: 'Calculus Mastery',
-        description: 'Master calculus with step-by-step explanations',
-        thumbnail: 'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=400',
-        level: 'Secondary',
-        studentsCount: 98,
-        lessonsCount: 38,
-        duration: '20h 15m',
-        rating: 4.8,
-        reviewsCount: 56,
-        price: 249,
-        status: 'published',
-        progress: 100,
-    },
-    {
-        id: '3',
-        title: 'Geometry Basics',
-        description: 'Learn geometry fundamentals with visual examples',
-        thumbnail: 'https://images.unsplash.com/photo-1582394219616-5f46b8e7a4a2?w=400',
-        level: 'Preparatory',
-        studentsCount: 87,
-        lessonsCount: 28,
-        duration: '14h 45m',
-        rating: 4.7,
-        reviewsCount: 42,
-        price: 149,
-        status: 'published',
-        progress: 100,
-    },
-    {
-        id: '4',
-        title: 'Trigonometry Advanced',
-        description: 'Advanced trigonometry for competitive exams',
-        thumbnail: 'https://images.unsplash.com/photo-1596495577886-d920f1fb7238?w=400',
-        level: 'Secondary',
-        studentsCount: 45,
-        lessonsCount: 32,
-        duration: '16h 00m',
-        rating: 4.6,
-        reviewsCount: 28,
-        price: 179,
-        status: 'draft',
-        progress: 75,
-    },
-    {
-        id: '5',
-        title: 'Statistics & Probability',
-        description: 'Comprehensive statistics course',
-        thumbnail: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=400',
-        level: 'Secondary',
-        studentsCount: 0,
-        lessonsCount: 12,
-        duration: '8h 00m',
-        rating: 0,
-        reviewsCount: 0,
-        price: 129,
-        status: 'draft',
-        progress: 40,
-    },
-];
+import { useCourses } from '@/hooks/useCourses';
 
 const levels = [
     { id: 'all', name: 'All Levels' },
@@ -118,6 +41,7 @@ const statuses = [
 const statusColors = {
     published: 'bg-emerald-100 text-emerald-700',
     draft: 'bg-amber-100 text-amber-700',
+    active: 'bg-emerald-100 text-emerald-700',
 };
 
 export default function MyCoursesPage() {
@@ -128,18 +52,37 @@ export default function MyCoursesPage() {
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 6;
 
-    // Filter courses
-    const filteredCourses = myCourses.filter((course) => {
-        const matchesSearch = course.title.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesLevel = selectedLevel === 'all' || course.level.toLowerCase() === selectedLevel;
-        const matchesStatus = selectedStatus === 'all' || course.status === selectedStatus;
-        return matchesSearch && matchesLevel && matchesStatus;
+    // Use real data from hook
+    const { courses: rawCourses, isLoading, error, refetch } = useCourses({
+        level: selectedLevel !== 'all' ? selectedLevel : undefined,
+        status: selectedStatus !== 'all' ? selectedStatus : undefined,
+        search: searchQuery || undefined,
     });
+
+    // Transform data to match UI
+    const myCourses = rawCourses.map(c => ({
+        id: c.id,
+        title: c.name,
+        description: c.description || '',
+        thumbnail: c.thumbnail_url || 'https://images.unsplash.com/photo-1509228468518-180dd4864904?w=400',
+        level: c.level ? c.level.charAt(0).toUpperCase() + c.level.slice(1) : 'Unknown',
+        studentsCount: 0, // Would need batch enrollment count
+        lessonsCount: 0, // Would need lessons count
+        duration: `${c.duration_weeks || 0} weeks`,
+        rating: 0,
+        reviewsCount: 0,
+        price: c.price || 0,
+        status: c.status || 'draft',
+        progress: 100,
+    }));
+
+    // Filter courses (search handled by hook)
+    const filteredCourses = myCourses;
 
     // Stats
     const stats = {
         total: myCourses.length,
-        published: myCourses.filter((c) => c.status === 'published').length,
+        published: myCourses.filter((c) => c.status === 'active').length,
         drafts: myCourses.filter((c) => c.status === 'draft').length,
         totalStudents: myCourses.reduce((acc, c) => acc + c.studentsCount, 0),
     };
@@ -150,6 +93,28 @@ export default function MyCoursesPage() {
         (currentPage - 1) * itemsPerPage,
         currentPage * itemsPerPage
     );
+
+    if (isLoading) {
+        return (
+            <div className="flex items-center justify-center min-h-[400px]">
+                <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[400px] text-center">
+                <p className="text-red-500 mb-4">{error}</p>
+                <button
+                    onClick={refetch}
+                    className="px-4 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600"
+                >
+                    Try Again
+                </button>
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-6">
@@ -388,7 +353,7 @@ export default function MyCoursesPage() {
                                             >
                                                 <Edit className="w-4 h-4" />
                                             </motion.button>
-                                            {course.status === 'published' && (
+                                            {course.status === 'active' && (
                                                 <motion.button
                                                     whileHover={{ scale: 1.1 }}
                                                     whileTap={{ scale: 0.9 }}

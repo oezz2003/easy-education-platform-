@@ -18,125 +18,57 @@ import {
     Play,
     Clock,
     DollarSign,
-    Award
+    Loader2
 } from 'lucide-react';
-
-// Mock teacher data
-const mockTeachers = [
-    {
-        id: '1',
-        name: 'Ahmed Hassan',
-        email: 'ahmed.hassan@email.com',
-        phone: '+20 123 456 7890',
-        avatar: 'https://i.pravatar.cc/150?img=11',
-        subject: 'Mathematics',
-        subjectIcon: '/ASSITS/calc.png',
-        level: 'All Levels',
-        coursesCount: 8,
-        studentsCount: 450,
-        rating: 4.9,
-        reviewsCount: 128,
-        joinDate: '2023-06-15',
-        status: 'active',
-        bio: 'Senior Mathematics instructor with 10+ years of experience. Specializing in advanced calculus and algebra for preparation and secondary levels.',
-        totalEarnings: 45000,
-        lessonsCompleted: 520,
-        hoursTeaching: 320,
-    },
-    {
-        id: '2',
-        name: 'Sara Ali',
-        email: 'sara.ali@email.com',
-        phone: '+20 100 200 3000',
-        avatar: 'https://i.pravatar.cc/150?img=5',
-        subject: 'Physics',
-        subjectIcon: '/ASSITS/chemstry.png',
-        level: 'Secondary',
-        coursesCount: 5,
-        studentsCount: 280,
-        rating: 4.8,
-        reviewsCount: 89,
-        joinDate: '2023-09-20',
-        status: 'active',
-        bio: 'Physics specialist focusing on practical experiments and hands-on learning.',
-        totalEarnings: 28000,
-        lessonsCompleted: 340,
-        hoursTeaching: 200,
-    },
-];
-
-// Mock courses
-const teacherCourses = [
-    {
-        id: '1',
-        title: 'Advanced Mathematics',
-        thumbnail: 'https://images.unsplash.com/photo-1509228468518-180dd4864904?w=400',
-        studentsCount: 125,
-        lessonsCount: 45,
-        rating: 4.9,
-        revenue: 12500,
-        status: 'published',
-    },
-    {
-        id: '2',
-        title: 'Algebra Fundamentals',
-        thumbnail: 'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=400',
-        studentsCount: 98,
-        lessonsCount: 32,
-        rating: 4.8,
-        revenue: 8200,
-        status: 'published',
-    },
-    {
-        id: '3',
-        title: 'Calculus Mastery',
-        thumbnail: 'https://images.unsplash.com/photo-1546410531-bb4caa6b424d?w=400',
-        studentsCount: 67,
-        lessonsCount: 28,
-        rating: 4.7,
-        revenue: 5800,
-        status: 'draft',
-    },
-];
-
-// Mock reviews
-const recentReviews = [
-    {
-        id: '1',
-        studentName: 'Omar Khaled',
-        studentAvatar: 'https://i.pravatar.cc/150?img=12',
-        rating: 5,
-        comment: 'Excellent teacher! Explains complex concepts in a simple way.',
-        date: '2024-12-25',
-        course: 'Advanced Mathematics',
-    },
-    {
-        id: '2',
-        studentName: 'Fatma Nour',
-        studentAvatar: 'https://i.pravatar.cc/150?img=9',
-        rating: 5,
-        comment: 'Very patient and helpful. Highly recommended!',
-        date: '2024-12-22',
-        course: 'Algebra Fundamentals',
-    },
-    {
-        id: '3',
-        studentName: 'Youssef Ibrahim',
-        studentAvatar: 'https://i.pravatar.cc/150?img=15',
-        rating: 4,
-        comment: 'Great course content and well-structured lessons.',
-        date: '2024-12-20',
-        course: 'Calculus Mastery',
-    },
-];
+import { useTeachers } from '@/hooks/useTeachers';
+import { useEffect, useState, useCallback } from 'react';
+import EditTeacherModal from '@/app/components/admin/EditTeacherModal';
 
 export default function TeacherProfilePage() {
     const params = useParams();
     const teacherId = params.id as string;
+    const { getTeacher, updateTeacher } = useTeachers();
+    const [teacher, setTeacher] = useState<any>(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
-    const teacher = mockTeachers.find((t) => t.id === teacherId);
+    const fetchTeacher = useCallback(async () => {
+        setIsLoading(true);
+        const { data, error } = await getTeacher(teacherId);
+        if (error) {
+            setError(error);
+        } else {
+            setTeacher(data);
+        }
+        setIsLoading(false);
+    }, [teacherId, getTeacher]);
 
-    if (!teacher) {
+    useEffect(() => {
+        if (teacherId) {
+            fetchTeacher();
+        }
+    }, [teacherId, fetchTeacher]);
+
+    const handleUpdateTeacher = async (teacherId: string, userId: string, updates: any) => {
+        const result = await updateTeacher(teacherId, userId, updates);
+        if (result.success) {
+            // Refresh data
+            const { data } = await getTeacher(teacherId);
+            setTeacher(data);
+        }
+        return result;
+    };
+
+    if (isLoading) {
+        return (
+            <div className="min-h-[60vh] flex items-center justify-center">
+                <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+            </div>
+        );
+    }
+
+    if (error || !teacher) {
         return (
             <div className="min-h-[60vh] flex items-center justify-center">
                 <div className="text-center">
@@ -147,7 +79,7 @@ export default function TeacherProfilePage() {
                         <GraduationCap className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                     </motion.div>
                     <h2 className="text-xl font-bold text-gray-900 mb-2">Teacher not found</h2>
-                    <p className="text-gray-500 mb-6">The teacher you're looking for doesn't exist.</p>
+                    <p className="text-gray-500 mb-6">{error || "The teacher you're looking for doesn't exist."}</p>
                     <Link
                         href="/admin/teachers"
                         className="text-blue-500 hover:text-blue-600 font-medium"
@@ -158,6 +90,12 @@ export default function TeacherProfilePage() {
             </div>
         );
     }
+
+    // Calculate stats
+    const coursesCount = new Set(teacher.batches?.map((b: any) => b.course_id)).size || 0;
+    const studentsCount = teacher.total_students || 0;
+    const totalEarnings = 0; // TODO: Calculate from invoices
+    const hoursTeaching = 0; // TODO: Calculate from sessions
 
     return (
         <div className="space-y-6">
@@ -189,13 +127,13 @@ export default function TeacherProfilePage() {
                             className="relative"
                         >
                             <img
-                                src={teacher.avatar}
-                                alt={teacher.name}
+                                src={teacher.profile?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(teacher.profile?.full_name || 'Teacher')}`}
+                                alt={teacher.profile?.full_name}
                                 loading="lazy"
-                                className="w-32 h-32 rounded-2xl border-4 border-white shadow-xl object-cover"
+                                className="w-32 h-32 rounded-2xl border-4 border-white shadow-xl object-cover bg-white"
                             />
                             <span
-                                className={`absolute bottom-2 right-2 w-4 h-4 rounded-full border-2 border-white ${teacher.status === 'active' ? 'bg-blue-500' : 'bg-gray-400'
+                                className={`absolute bottom-2 right-2 w-4 h-4 rounded-full border-2 border-white ${teacher.profile?.status === 'active' ? 'bg-blue-500' : 'bg-gray-400'
                                     }`}
                             />
                         </motion.div>
@@ -205,23 +143,18 @@ export default function TeacherProfilePage() {
                             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                                 <div>
                                     <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
-                                        {teacher.name}
+                                        {teacher.profile?.full_name}
                                     </h1>
                                     <div className="flex flex-wrap items-center gap-3 mt-2">
                                         <div className="flex items-center gap-2">
-                                            <img
-                                                src={teacher.subjectIcon}
-                                                alt=""
-                                                loading="lazy"
-                                                className="w-5 h-5 object-contain"
-                                            />
-                                            <span className="text-gray-600">{teacher.subject}</span>
+                                            <BookOpen className="w-4 h-4 text-gray-400" />
+                                            <span className="text-gray-600">{teacher.subject || 'No subject'}</span>
                                         </div>
                                         <span className="text-gray-300">•</span>
                                         <div className="flex items-center gap-1">
                                             <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
-                                            <span className="font-medium text-gray-900">{teacher.rating}</span>
-                                            <span className="text-gray-500">({teacher.reviewsCount} reviews)</span>
+                                            <span className="font-medium text-gray-900">{teacher.rating || 0}</span>
+                                            <span className="text-gray-500">({teacher.total_reviews || 0} reviews)</span>
                                         </div>
                                     </div>
                                 </div>
@@ -231,6 +164,7 @@ export default function TeacherProfilePage() {
                                     <motion.button
                                         whileHover={{ scale: 1.05 }}
                                         whileTap={{ scale: 0.95 }}
+                                        onClick={() => setIsEditModalOpen(true)}
                                         className="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-xl font-medium shadow-lg transition-colors"
                                     >
                                         <Edit className="w-4 h-4" />
@@ -249,7 +183,7 @@ export default function TeacherProfilePage() {
                     </div>
 
                     {/* Bio */}
-                    <p className="text-gray-600 mt-4 max-w-3xl">{teacher.bio}</p>
+                    <p className="text-gray-600 mt-4 max-w-3xl">{teacher.bio || 'No biography available.'}</p>
 
                     {/* Contact Info */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6 pt-6 border-t border-gray-100">
@@ -259,7 +193,7 @@ export default function TeacherProfilePage() {
                             </div>
                             <div>
                                 <p className="text-xs text-gray-500">Email</p>
-                                <p className="font-medium text-gray-900">{teacher.email}</p>
+                                <p className="font-medium text-gray-900">{teacher.profile?.email}</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-3">
@@ -268,7 +202,7 @@ export default function TeacherProfilePage() {
                             </div>
                             <div>
                                 <p className="text-xs text-gray-500">Phone</p>
-                                <p className="font-medium text-gray-900">{teacher.phone}</p>
+                                <p className="font-medium text-gray-900">{teacher.profile?.phone || 'N/A'}</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-3">
@@ -278,7 +212,7 @@ export default function TeacherProfilePage() {
                             <div>
                                 <p className="text-xs text-gray-500">Joined</p>
                                 <p className="font-medium text-gray-900">
-                                    {new Date(teacher.joinDate).toLocaleDateString('en-US', {
+                                    {new Date(teacher.created_at).toLocaleDateString('en-US', {
                                         month: 'short',
                                         year: 'numeric',
                                     })}
@@ -294,25 +228,25 @@ export default function TeacherProfilePage() {
                 {[
                     {
                         label: 'Total Students',
-                        value: teacher.studentsCount,
+                        value: studentsCount,
                         icon: Users,
                         color: 'blue',
                     },
                     {
                         label: 'Courses',
-                        value: teacher.coursesCount,
+                        value: coursesCount,
                         icon: BookOpen,
                         color: 'emerald',
                     },
                     {
                         label: 'Hours Teaching',
-                        value: teacher.hoursTeaching,
+                        value: hoursTeaching,
                         icon: Clock,
                         color: 'purple',
                     },
                     {
                         label: 'Total Earnings',
-                        value: `$${teacher.totalEarnings.toLocaleString()}`,
+                        value: `$${totalEarnings.toLocaleString()}`,
                         icon: DollarSign,
                         color: 'amber',
                     },
@@ -345,62 +279,55 @@ export default function TeacherProfilePage() {
                     className="lg:col-span-2 bg-white rounded-2xl shadow-lg border border-gray-100 p-6"
                 >
                     <div className="flex items-center justify-between mb-6">
-                        <h2 className="text-xl font-bold text-gray-900">Courses</h2>
-                        <span className="text-sm text-gray-500">{teacherCourses.length} courses</span>
+                        <h2 className="text-xl font-bold text-gray-900">Active Batches</h2>
+                        <span className="text-sm text-gray-500">{teacher.batches?.length || 0} batches</span>
                     </div>
 
                     <div className="space-y-4">
-                        {teacherCourses.map((course, index) => (
+                        {teacher.batches?.map((batch: any, index: number) => (
                             <motion.div
-                                key={course.id}
+                                key={batch.id}
                                 initial={{ opacity: 0, x: -20 }}
                                 animate={{ opacity: 1, x: 0 }}
                                 transition={{ delay: 0.1 * index }}
                                 className="flex gap-4 p-4 rounded-xl border border-gray-100 hover:border-blue-200 transition-colors"
                             >
-                                <img
-                                    src={course.thumbnail}
-                                    alt={course.title}
-                                    loading="lazy"
-                                    className="w-24 h-18 rounded-lg object-cover"
-                                />
+                                <div className="w-16 h-16 rounded-lg bg-blue-50 flex items-center justify-center text-blue-500 font-bold text-xl">
+                                    {batch.course?.name?.charAt(0) || 'C'}
+                                </div>
                                 <div className="flex-1 min-w-0">
                                     <div className="flex items-start justify-between gap-2">
-                                        <h3 className="font-semibold text-gray-900 truncate">{course.title}</h3>
+                                        <h3 className="font-semibold text-gray-900 truncate">{batch.name}</h3>
                                         <span
-                                            className={`px-2 py-1 rounded-full text-xs font-medium ${course.status === 'published'
-                                                    ? 'bg-emerald-100 text-emerald-700'
-                                                    : 'bg-gray-100 text-gray-600'
+                                            className={`px-2 py-1 rounded-full text-xs font-medium ${batch.status === 'active'
+                                                ? 'bg-emerald-100 text-emerald-700'
+                                                : 'bg-gray-100 text-gray-600'
                                                 }`}
                                         >
-                                            {course.status}
+                                            {batch.status}
                                         </span>
                                     </div>
+                                    <p className="text-sm text-gray-500 mt-1">{batch.course?.name}</p>
                                     <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
                                         <div className="flex items-center gap-1">
+                                            <Calendar className="w-4 h-4" />
+                                            <span>{new Date(batch.start_date).toLocaleDateString()}</span>
+                                        </div>
+                                        <div className="flex items-center gap-1">
                                             <Users className="w-4 h-4" />
-                                            <span>{course.studentsCount}</span>
-                                        </div>
-                                        <div className="flex items-center gap-1">
-                                            <Play className="w-4 h-4" />
-                                            <span>{course.lessonsCount} lessons</span>
-                                        </div>
-                                        <div className="flex items-center gap-1">
-                                            <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
-                                            <span>{course.rating}</span>
+                                            <span>{batch.max_students} max</span>
                                         </div>
                                     </div>
-                                </div>
-                                <div className="text-right">
-                                    <p className="font-bold text-gray-900">${course.revenue.toLocaleString()}</p>
-                                    <p className="text-xs text-gray-500">Revenue</p>
                                 </div>
                             </motion.div>
                         ))}
+                        {(!teacher.batches || teacher.batches.length === 0) && (
+                            <p className="text-center text-gray-500 py-8">No active batches found.</p>
+                        )}
                     </div>
                 </motion.div>
 
-                {/* Reviews */}
+                {/* Reviews Placeholder */}
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -411,74 +338,23 @@ export default function TeacherProfilePage() {
                         <h2 className="text-xl font-bold text-gray-900">Recent Reviews</h2>
                         <div className="flex items-center gap-1">
                             <Star className="w-5 h-5 text-amber-400 fill-amber-400" />
-                            <span className="font-bold text-gray-900">{teacher.rating}</span>
+                            <span className="font-bold text-gray-900">{teacher.rating || 0}</span>
                         </div>
                     </div>
 
-                    <div className="space-y-4">
-                        {recentReviews.map((review, index) => (
-                            <motion.div
-                                key={review.id}
-                                initial={{ opacity: 0, x: 20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: 0.1 * index }}
-                                className="p-4 rounded-xl bg-gray-50"
-                            >
-                                <div className="flex items-start gap-3">
-                                    <img
-                                        src={review.studentAvatar}
-                                        alt={review.studentName}
-                                        loading="lazy"
-                                        className="w-10 h-10 rounded-full object-cover"
-                                    />
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex items-center justify-between">
-                                            <p className="font-semibold text-gray-900">{review.studentName}</p>
-                                            <div className="flex items-center gap-0.5">
-                                                {Array.from({ length: review.rating }).map((_, i) => (
-                                                    <Star
-                                                        key={i}
-                                                        className="w-3 h-3 text-amber-400 fill-amber-400"
-                                                    />
-                                                ))}
-                                            </div>
-                                        </div>
-                                        <p className="text-sm text-gray-600 mt-1">{review.comment}</p>
-                                        <p className="text-xs text-gray-400 mt-2">{review.course}</p>
-                                    </div>
-                                </div>
-                            </motion.div>
-                        ))}
+                    <div className="text-center py-8 text-gray-500">
+                        No reviews yet.
                     </div>
-
-                    <button className="w-full mt-6 py-3 text-sm font-medium text-blue-500 hover:text-blue-600 transition-colors">
-                        View All Reviews →
-                    </button>
                 </motion.div>
             </div>
 
-            {/* Performance Chart Placeholder */}
-            <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4 }}
-                className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6"
-            >
-                <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-xl font-bold text-gray-900">Performance Overview</h2>
-                    <select className="px-4 py-2 rounded-xl border border-gray-200 text-sm">
-                        <option>Last 30 days</option>
-                        <option>Last 3 months</option>
-                        <option>Last year</option>
-                    </select>
-                </div>
-                <div className="h-64 flex items-center justify-center bg-gray-50 rounded-xl">
-                    <div className="text-center">
-                        <TrendingUp className="w-12 h-12 text-gray-300 mx-auto mb-2" />
-                        <p className="text-gray-500">Performance chart will be displayed here</p>
-                    </div>
-                </div>
-            </motion.div>
+            {/* Edit Modal */}
+            <EditTeacherModal
+                isOpen={isEditModalOpen}
+                onClose={() => setIsEditModalOpen(false)}
+                teacher={teacher}
+                onSubmit={handleUpdateTeacher}
+            />
         </div>
     );
 }

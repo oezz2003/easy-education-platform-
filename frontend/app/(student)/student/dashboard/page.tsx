@@ -12,82 +12,117 @@ import {
     Calendar,
     TrendingUp,
     ChevronRight,
-    Star
+    Star,
+    Loader2
 } from 'lucide-react';
-
-// Stats data
-const stats = [
-    {
-        label: 'Enrolled Courses',
-        value: '6',
-        change: '+2 this month',
-        icon: BookOpen,
-        icon3D: '/ASSITS/folders.png',
-        bgColor: 'bg-purple-50',
-        borderColor: 'border-purple-400',
-    },
-    {
-        label: 'Lessons Done',
-        value: '45',
-        change: '+12 this week',
-        icon: Play,
-        icon3D: '/ASSITS/play.png',
-        bgColor: 'bg-blue-50',
-        borderColor: 'border-blue-400',
-    },
-    {
-        label: 'Hours Learned',
-        value: '32h',
-        change: '8h this week',
-        icon: Clock,
-        icon3D: '/ASSITS/global.png',
-        bgColor: 'bg-emerald-50',
-        borderColor: 'border-emerald-400',
-    },
-    {
-        label: 'Achievements',
-        value: '12',
-        change: '3 new badges',
-        icon: Trophy,
-        icon3D: '/ASSITS/cup.png',
-        bgColor: 'bg-amber-50',
-        borderColor: 'border-amber-400',
-    },
-];
-
-// Continue learning data
-const continueLesson = {
-    courseId: '1',
-    courseTitle: 'Advanced Algebra',
-    lessonTitle: 'Quadratic Equations',
-    progress: 65,
-    thumbnail: 'https://images.unsplash.com/photo-1509228468518-180dd4864904?w=400',
-    duration: '25 min remaining',
-};
-
-// Today's schedule
-const todaySchedule = [
-    { id: 1, title: 'Algebra Live Session', time: '2:00 PM', type: 'live', teacher: 'Ahmed Hassan' },
-    { id: 2, title: 'Calculus Homework Due', time: '6:00 PM', type: 'assignment', course: 'Calculus Mastery' },
-    { id: 3, title: 'Geometry Quiz', time: '8:00 PM', type: 'quiz', course: 'Geometry Basics' },
-];
-
-// Recent activity
-const recentActivity = [
-    { action: 'Completed "Linear Functions" lesson', time: '2 hours ago', xp: 50 },
-    { action: 'Earned "Quick Learner" badge 🏆', time: '5 hours ago', xp: 100 },
-    { action: 'Started "Advanced Algebra" course', time: '1 day ago', xp: 25 },
-    { action: 'Achieved 7-day streak! 🔥', time: '1 day ago', xp: 75 },
-];
-
-// In progress courses
-const inProgressCourses = [
-    { id: '1', title: 'Advanced Algebra', progress: 65, lessons: 24, thumbnail: 'https://images.unsplash.com/photo-1509228468518-180dd4864904?w=400' },
-    { id: '2', title: 'Calculus Mastery', progress: 40, lessons: 32, thumbnail: 'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=400' },
-    { id: '3', title: 'Geometry Basics', progress: 80, lessons: 18, thumbnail: 'https://images.unsplash.com/photo-1582394219616-5f46b8e7a4a2?w=400' },
-];
+import { useAuth } from '@/hooks/useAuth';
+import { useStudents } from '@/hooks/useStudents';
+import { useSessions } from '@/hooks/useSessions';
 
 export default function StudentDashboard() {
+    const { profile, isLoading: authLoading } = useAuth();
+    const { students } = useStudents();
+    const { sessions } = useSessions();
+
+    // Get current student's data
+    const currentStudent = students.find(s => s.profile?.id === profile?.id);
+    const xpPoints = currentStudent?.xp_points || 0;
+    const streak = currentStudent?.streak_days || 0;
+
+    // Get today's sessions
+    const today = new Date().toISOString().split('T')[0];
+    const todaySessions = sessions.filter(s => s.session_date === today);
+
+    // Stats data - mix of real and placeholder
+    const stats = [
+        {
+            label: 'Enrolled Courses',
+            value: '6',
+            change: '+2 this month',
+            icon: BookOpen,
+            icon3D: '/ASSITS/folders.png',
+            bgColor: 'bg-purple-50',
+            borderColor: 'border-purple-400',
+        },
+        {
+            label: 'Lessons Done',
+            value: '45',
+            change: '+12 this week',
+            icon: Play,
+            icon3D: '/ASSITS/play.png',
+            bgColor: 'bg-blue-50',
+            borderColor: 'border-blue-400',
+        },
+        {
+            label: 'Hours Learned',
+            value: '32h',
+            change: '8h this week',
+            icon: Clock,
+            icon3D: '/ASSITS/global.png',
+            bgColor: 'bg-emerald-50',
+            borderColor: 'border-emerald-400',
+        },
+        {
+            label: 'Achievements',
+            value: '12',
+            change: '3 new badges',
+            icon: Trophy,
+            icon3D: '/ASSITS/cup.png',
+            bgColor: 'bg-amber-50',
+            borderColor: 'border-amber-400',
+        },
+    ];
+
+    // Continue learning data - placeholder
+    const continueLesson = {
+        courseId: '1',
+        courseTitle: 'Advanced Algebra',
+        lessonTitle: 'Quadratic Equations',
+        progress: 65,
+        thumbnail: 'https://images.unsplash.com/photo-1509228468518-180dd4864904?w=400',
+        duration: '25 min remaining',
+    };
+
+    // Today's schedule from real sessions or placeholder
+    const todaySchedule = todaySessions.length > 0
+        ? todaySessions.slice(0, 3).map(s => ({
+            id: s.id,
+            title: s.title || 'Session',
+            time: s.start_time || '',
+            type: 'live' as const,
+            teacher: 'Teacher'
+        }))
+        : [
+            { id: '1', title: 'Algebra Live Session', time: '2:00 PM', type: 'live' as const, teacher: 'Ahmed Hassan' },
+            { id: '2', title: 'Calculus Homework Due', time: '6:00 PM', type: 'assignment' as const, course: 'Calculus Mastery' },
+            { id: '3', title: 'Geometry Quiz', time: '8:00 PM', type: 'quiz' as const, course: 'Geometry Basics' },
+        ];
+
+    // Recent activity placeholder
+    const recentActivity = [
+        { action: 'Completed "Linear Functions" lesson', time: '2 hours ago', xp: 50 },
+        { action: 'Earned "Quick Learner" badge 🏆', time: '5 hours ago', xp: 100 },
+        { action: 'Started "Advanced Algebra" course', time: '1 day ago', xp: 25 },
+        { action: 'Achieved streak! 🔥', time: '1 day ago', xp: 75 },
+    ];
+
+    // In progress courses placeholder
+    const inProgressCourses = [
+        { id: '1', title: 'Advanced Algebra', progress: 65, lessons: 24, thumbnail: 'https://images.unsplash.com/photo-1509228468518-180dd4864904?w=400' },
+        { id: '2', title: 'Calculus Mastery', progress: 40, lessons: 32, thumbnail: 'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=400' },
+        { id: '3', title: 'Geometry Basics', progress: 80, lessons: 18, thumbnail: 'https://images.unsplash.com/photo-1582394219616-5f46b8e7a4a2?w=400' },
+    ];
+
+    // Get user display name
+    const displayName = profile?.full_name?.split(' ')[0] || 'Champion';
+
+    if (authLoading) {
+        return (
+            <div className="flex items-center justify-center min-h-[400px]">
+                <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
+            </div>
+        );
+    }
     return (
         <div className="space-y-6">
             {/* Welcome Header */}

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Video, Calendar, Clock, Users, Link as LinkIcon, FileText, Check, Sparkles } from 'lucide-react';
+import { UserAvatar } from '../shared/UserAvatar';
 
 interface CreateSessionModalProps {
     isOpen: boolean;
@@ -17,10 +18,10 @@ const courses = [
 ];
 
 const teachers = [
-    { id: '1', name: 'Ahmed Hassan', avatar: 'https://i.pravatar.cc/150?img=11', subject: 'Mathematics' },
-    { id: '2', name: 'Sara Ali', avatar: 'https://i.pravatar.cc/150?img=5', subject: 'Physics' },
-    { id: '3', name: 'Mohamed Farid', avatar: 'https://i.pravatar.cc/150?img=12', subject: 'English' },
-    { id: '4', name: 'Fatma Nour', avatar: 'https://i.pravatar.cc/150?img=9', subject: 'Chemistry' },
+    { id: '1', name: 'Ahmed Hassan', avatar: null, subject: 'Mathematics' },
+    { id: '2', name: 'Sara Ali', avatar: null, subject: 'Physics' },
+    { id: '3', name: 'Mohamed Farid', avatar: null, subject: 'English' },
+    { id: '4', name: 'Fatma Nour', avatar: null, subject: 'Chemistry' },
 ];
 
 export default function CreateSessionModal({ isOpen, onClose }: CreateSessionModalProps) {
@@ -152,18 +153,12 @@ export default function CreateSessionModal({ isOpen, onClose }: CreateSessionMod
                                                         whileHover={{ scale: 1.02 }}
                                                         whileTap={{ scale: 0.98 }}
                                                         onClick={() => setFormData({ ...formData, courseId: course.id })}
-                                                        className={`relative p-2 rounded-xl border-2 overflow-hidden transition-all ${formData.courseId === course.id
-                                                                ? 'border-red-500 ring-2 ring-red-100'
-                                                                : 'border-gray-200 hover:border-gray-300'
+                                                        className={`p-3 rounded-xl border-2 text-left transition-all ${formData.courseId === course.id
+                                                            ? 'border-red-500 bg-red-50'
+                                                            : 'border-gray-200 hover:border-gray-300'
                                                             }`}
                                                     >
-                                                        <img src={course.thumbnail} alt="" className="w-full h-16 object-cover rounded-lg mb-2" />
-                                                        <p className="text-xs font-medium text-gray-700 truncate">{course.title}</p>
-                                                        {formData.courseId === course.id && (
-                                                            <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-red-500 flex items-center justify-center">
-                                                                <Check className="w-3 h-3 text-white" />
-                                                            </div>
-                                                        )}
+                                                        <p className="font-medium text-gray-900 text-sm">{course.title}</p>
                                                     </motion.button>
                                                 ))}
                                             </div>
@@ -325,7 +320,8 @@ export default function CreateSessionModal({ isOpen, onClose }: CreateSessionMod
                         </div>
                     </motion.div>
                 </>
-            )}
-        </AnimatePresence>
+            )
+            }
+        </AnimatePresence >
     );
 }

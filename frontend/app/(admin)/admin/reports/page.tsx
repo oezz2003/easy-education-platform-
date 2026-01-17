@@ -25,6 +25,7 @@ import {
     AlertCircle,
     ChevronDown
 } from 'lucide-react';
+import { UserAvatar } from '@/app/components/shared/UserAvatar';
 
 // KPI Data
 const kpiData = [
@@ -125,10 +126,10 @@ const topCourses = [
 
 // Top Teachers
 const topTeachers = [
-    { id: 1, name: 'Ahmed Hassan', avatar: 'https://i.pravatar.cc/150?img=11', students: 890, rating: 4.9, courses: 8 },
-    { id: 2, name: 'Sara Ali', avatar: 'https://i.pravatar.cc/150?img=5', students: 756, rating: 4.8, courses: 6 },
-    { id: 3, name: 'Mohamed Farid', avatar: 'https://i.pravatar.cc/150?img=12', students: 623, rating: 4.7, courses: 5 },
-    { id: 4, name: 'Fatma Nour', avatar: 'https://i.pravatar.cc/150?img=9', students: 534, rating: 4.6, courses: 4 },
+    { id: 1, name: 'Ahmed Hassan', avatar: null, students: 890, rating: 4.9, courses: 8 },
+    { id: 2, name: 'Sara Ali', avatar: null, students: 756, rating: 4.8, courses: 6 },
+    { id: 3, name: 'Mohamed Farid', avatar: null, students: 623, rating: 4.7, courses: 5 },
+    { id: 4, name: 'Fatma Nour', avatar: null, students: 534, rating: 4.6, courses: 4 },
 ];
 
 export default function ReportsPage() {
@@ -347,9 +348,9 @@ export default function ReportsPage() {
                         {topCourses.map((course, index) => (
                             <div key={course.id} className="flex items-center gap-3 p-2 rounded-xl hover:bg-gray-50 transition-colors">
                                 <span className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold ${index === 0 ? 'bg-amber-100 text-amber-600' :
-                                        index === 1 ? 'bg-gray-100 text-gray-600' :
-                                            index === 2 ? 'bg-orange-100 text-orange-600' :
-                                                'bg-gray-50 text-gray-500'
+                                    index === 1 ? 'bg-gray-100 text-gray-600' :
+                                        index === 2 ? 'bg-orange-100 text-orange-600' :
+                                            'bg-gray-50 text-gray-500'
                                     }`}>
                                     {index + 1}
                                 </span>
@@ -381,11 +382,15 @@ export default function ReportsPage() {
                         {topTeachers.map((teacher, index) => (
                             <div key={teacher.id} className="flex items-center gap-3 p-2 rounded-xl hover:bg-gray-50 transition-colors">
                                 <div className="relative">
-                                    <img src={teacher.avatar} alt="" className="w-10 h-10 rounded-xl object-cover" />
+                                    <UserAvatar
+                                        src={teacher.avatar}
+                                        name={teacher.name}
+                                        className="w-10 h-10 rounded-xl"
+                                    />
                                     {index < 3 && (
                                         <span className={`absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${index === 0 ? 'bg-amber-400 text-white' :
-                                                index === 1 ? 'bg-gray-300 text-gray-700' :
-                                                    'bg-orange-400 text-white'
+                                            index === 1 ? 'bg-gray-300 text-gray-700' :
+                                                'bg-orange-400 text-white'
                                             }`}>
                                             {index + 1}
                                         </span>

@@ -2,16 +2,25 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
+import { useRouter } from 'next/navigation';
 import { Plus, Bell, ChevronDown, Menu } from 'lucide-react';
 import SearchBar from '../shared/SearchBar';
+import { useAuth } from '@/hooks/useAuth';
 
 interface AdminHeaderProps {
     onMenuClick: () => void;
 }
 
 export default function AdminHeader({ onMenuClick }: AdminHeaderProps) {
+    const router = useRouter();
+    const { signOut } = useAuth();
     const [showNotifications, setShowNotifications] = useState(false);
     const [showProfile, setShowProfile] = useState(false);
+
+    const handleLogout = async () => {
+        await signOut();
+        router.push('/login');
+    };
 
     return (
         <motion.header
@@ -127,7 +136,10 @@ export default function AdminHeader({ onMenuClick }: AdminHeaderProps) {
                                     Settings
                                 </a>
                                 <hr className="my-2 border-gray-100" />
-                                <button className="w-full text-left px-4 py-2 rounded-xl hover:bg-red-50 text-sm text-red-500">
+                                <button
+                                    onClick={handleLogout}
+                                    className="w-full text-left px-4 py-2 rounded-xl hover:bg-red-50 text-sm text-red-500"
+                                >
                                     Logout
                                 </button>
                             </motion.div>

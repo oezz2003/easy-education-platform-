@@ -15,45 +15,66 @@ import {
     Trophy,
     Flame,
     Award,
-    Download
+    Download,
+    Loader2
 } from 'lucide-react';
-
-// Mock profile data
-const profileData = {
-    name: 'Omar Ahmed',
-    email: 'omar.ahmed@example.com',
-    phone: '+20 100 123 4567',
-    location: 'Cairo, Egypt',
-    joinedDate: 'January 2024',
-    avatar: 'https://i.pravatar.cc/150?img=33',
-    level: 12,
-    xp: 2450,
-    streak: 7,
-};
-
-// Stats data
-const stats = [
-    { label: 'Courses Enrolled', value: 6, icon: BookOpen, color: 'purple' },
-    { label: 'Hours Learned', value: 32, icon: Clock, color: 'blue' },
-    { label: 'Certificates', value: 1, icon: Award, color: 'amber' },
-    { label: 'Badges Earned', value: 12, icon: Trophy, color: 'emerald' },
-];
-
-// Enrolled courses summary
-const enrolledCourses = [
-    { id: 1, title: 'Advanced Algebra', progress: 65, status: 'in_progress' },
-    { id: 2, title: 'Calculus Mastery', progress: 40, status: 'in_progress' },
-    { id: 3, title: 'Geometry Basics', progress: 80, status: 'in_progress' },
-    { id: 4, title: 'Physics Fundamentals', progress: 100, status: 'completed' },
-];
-
-// Certificates
-const certificates = [
-    { id: 1, title: 'Physics Fundamentals', issueDate: 'February 2024', instructor: 'Omar Ibrahim' },
-];
+import { useAuth } from '@/hooks/useAuth';
+import { useStudents } from '@/hooks/useStudents';
+import { useCourses } from '@/hooks/useCourses';
+import { UserAvatar } from '@/app/components/shared/UserAvatar';
 
 export default function ProfilePage() {
     const [isEditing, setIsEditing] = useState(false);
+    const { profile, isLoading: authLoading } = useAuth();
+    const { students } = useStudents();
+    const { courses } = useCourses();
+
+    // Get current student data
+    const currentStudent = students.find(s => s.profile?.id === profile?.id);
+    const xp = currentStudent?.xp_points || 0;
+    const streak = currentStudent?.streak_days || 0;
+    const level = Math.floor(xp / 250) + 1;
+
+    const profileData = {
+        name: profile?.full_name || 'Student',
+        email: profile?.email || '',
+        phone: profile?.phone || 'Not set',
+        location: 'Egypt',
+        joinedDate: profile?.created_at ? new Date(profile.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'Unknown',
+        avatar: profile?.avatar_url,
+        level: level,
+        xp: xp,
+        streak: streak,
+    };
+
+    // Stats data
+    const stats = [
+        { label: 'Courses Enrolled', value: courses.length, icon: BookOpen, color: 'purple' },
+        { label: 'Hours Learned', value: 32, icon: Clock, color: 'blue' },
+        { label: 'Certificates', value: 1, icon: Award, color: 'amber' },
+        { label: 'Badges Earned', value: 12, icon: Trophy, color: 'emerald' },
+    ];
+
+    // Enrolled courses summary
+    const enrolledCourses = courses.slice(0, 4).map(c => ({
+        id: c.id,
+        title: c.name,
+        progress: c.status === 'archived' ? 100 : c.status === 'active' ? 50 : 0,
+        status: c.status === 'archived' ? 'completed' : 'in_progress',
+    }));
+
+    // Certificates placeholder
+    const certificates = [
+        { id: '1', title: 'Physics Fundamentals', issueDate: 'February 2024', instructor: 'Omar Ibrahim' },
+    ];
+
+    if (authLoading) {
+        return (
+            <div className="flex items-center justify-center min-h-[400px]">
+                <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-6">
@@ -92,10 +113,10 @@ export default function ProfilePage() {
                     {/* Avatar */}
                     <div className="relative -mt-16 mb-4">
                         <div className="relative inline-block">
-                            <img
+                            <UserAvatar
                                 src={profileData.avatar}
-                                alt={profileData.name}
-                                className="w-28 h-28 rounded-full object-cover border-4 border-white shadow-lg"
+                                name={profileData.name}
+                                className="w-28 h-28 rounded-full border-4 border-white shadow-lg"
                             />
                             <button className="absolute bottom-0 right-0 w-8 h-8 bg-emerald-500 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-emerald-600">
                                 <Camera className="w-4 h-4" />

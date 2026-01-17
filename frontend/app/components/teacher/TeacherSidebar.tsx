@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { useAuth } from '@/hooks/useAuth';
 import {
     LayoutDashboard,
     BookOpen,
@@ -81,7 +82,14 @@ interface SidebarProps {
 
 export default function TeacherSidebar({ isCollapsed, onToggle }: SidebarProps) {
     const pathname = usePathname();
+    const router = useRouter();
+    const { signOut } = useAuth();
     const [quoteIndex] = useState(Math.floor(Math.random() * quotes.length));
+
+    const handleLogout = async () => {
+        await signOut();
+        router.push('/login');
+    };
 
     return (
         <motion.aside
@@ -214,17 +222,16 @@ export default function TeacherSidebar({ isCollapsed, onToggle }: SidebarProps) 
                 </Link>
 
                 {/* Logout */}
-                <Link href="/login">
-                    <motion.button
-                        whileHover={{ scale: 1.02 }}
-                        className="w-full flex items-center gap-4 px-4 py-3 rounded-2xl hover:bg-red-50 transition-all cursor-pointer text-left"
-                    >
-                        <LogOut className="w-5 h-5 text-red-500" />
-                        {!isCollapsed && (
-                            <span className="text-sm text-red-500">Logout</span>
-                        )}
-                    </motion.button>
-                </Link>
+                <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    onClick={handleLogout}
+                    className="w-full flex items-center gap-4 px-4 py-3 rounded-2xl hover:bg-red-50 transition-all cursor-pointer text-left"
+                >
+                    <LogOut className="w-5 h-5 text-red-500" />
+                    {!isCollapsed && (
+                        <span className="text-sm text-red-500">Logout</span>
+                    )}
+                </motion.button>
 
                 {/* Motivational Quote */}
                 {!isCollapsed && (

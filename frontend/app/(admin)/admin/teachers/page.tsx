@@ -18,93 +18,12 @@ import {
     GraduationCap,
     Users,
     BookOpen,
-    Star
+    Star,
+    Loader2
 } from 'lucide-react';
 import AddTeacherModal from '../../../components/admin/AddTeacherModal';
-
-// Mock teachers data
-const mockTeachers = [
-    {
-        id: '1',
-        name: 'Ahmed Hassan',
-        email: 'ahmed.hassan@email.com',
-        phone: '+20 123 456 7890',
-        avatar: 'https://i.pravatar.cc/150?img=11',
-        subject: 'Mathematics',
-        subjectIcon: '/ASSITS/calc.png',
-        level: 'All Levels',
-        coursesCount: 8,
-        studentsCount: 450,
-        rating: 4.9,
-        joinDate: '2023-06-15',
-        status: 'active',
-        bio: 'Senior Mathematics instructor with 10+ years of experience.',
-    },
-    {
-        id: '2',
-        name: 'Sara Ali',
-        email: 'sara.ali@email.com',
-        phone: '+20 100 200 3000',
-        avatar: 'https://i.pravatar.cc/150?img=5',
-        subject: 'Physics',
-        subjectIcon: '/ASSITS/chemstry.png',
-        level: 'Secondary',
-        coursesCount: 5,
-        studentsCount: 280,
-        rating: 4.8,
-        joinDate: '2023-09-20',
-        status: 'active',
-        bio: 'Physics specialist focusing on practical experiments.',
-    },
-    {
-        id: '3',
-        name: 'Mohamed Farid',
-        email: 'mohamed.f@email.com',
-        phone: '+20 150 250 3500',
-        avatar: 'https://i.pravatar.cc/150?img=12',
-        subject: 'English',
-        subjectIcon: '/ASSITS/text bubble.png',
-        level: 'Primary',
-        coursesCount: 6,
-        studentsCount: 520,
-        rating: 4.7,
-        joinDate: '2023-04-10',
-        status: 'active',
-        bio: 'English language expert with IELTS certification.',
-    },
-    {
-        id: '4',
-        name: 'Fatma Nour',
-        email: 'fatma.n@email.com',
-        phone: '+20 180 280 3800',
-        avatar: 'https://i.pravatar.cc/150?img=9',
-        subject: 'Chemistry',
-        subjectIcon: '/ASSITS/chemstry.png',
-        level: 'Preparatory',
-        coursesCount: 4,
-        studentsCount: 180,
-        rating: 4.9,
-        joinDate: '2024-01-05',
-        status: 'inactive',
-        bio: 'Chemistry teacher with lab management experience.',
-    },
-    {
-        id: '5',
-        name: 'Khaled Ibrahim',
-        email: 'khaled.i@email.com',
-        phone: '+20 190 290 3900',
-        avatar: 'https://i.pravatar.cc/150?img=15',
-        subject: 'Geography',
-        subjectIcon: '/ASSITS/global.png',
-        level: 'Preparatory',
-        coursesCount: 3,
-        studentsCount: 150,
-        rating: 4.6,
-        joinDate: '2024-02-15',
-        status: 'active',
-        bio: 'Geography and earth sciences enthusiast.',
-    },
-];
+import { useTeachers } from '@/hooks/useTeachers';
+import { UserAvatar } from '@/app/components/shared/UserAvatar';
 
 const subjects = [
     { id: 'all', name: 'All Subjects' },
@@ -128,15 +47,44 @@ export default function TeachersPage() {
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 5;
 
-    // Filter teachers
-    const filteredTeachers = mockTeachers.filter((teacher) => {
-        const matchesSearch =
-            teacher.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            teacher.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            teacher.subject.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesSubject = selectedSubject === 'all' || teacher.subject.toLowerCase() === selectedSubject;
-        return matchesSearch && matchesSubject;
+    // Use real data from hook
+    const { teachers: rawTeachers, isLoading, error, refetch, deleteTeacher, createTeacher } = useTeachers({
+        subject: selectedSubject !== 'all' ? selectedSubject : undefined,
+        search: searchQuery || undefined,
     });
+
+    // Handler for adding new teacher
+    const handleAddTeacher = async (data: { name: string; email: string; phone: string; subject: string; bio: string }) => {
+        const result = await createTeacher({
+            name: data.name,
+            email: data.email,
+            phone: data.phone,
+            subject: data.subject,
+            bio: data.bio,
+        });
+        return result;
+    };
+
+    // Transform data to match UI structure
+    const teachersData = rawTeachers.map(t => ({
+        id: t.id,
+        name: t.profile?.full_name || 'Unknown',
+        email: t.profile?.email || '',
+        phone: t.profile?.phone || '',
+        avatar: t.profile?.avatar_url,
+        subject: t.subject || 'General',
+        subjectIcon: '/ASSITS/folders.png',
+        level: 'All Levels',
+        coursesCount: 0, // Would need separate query
+        studentsCount: 0, // Would need separate query
+        rating: t.rating || 0,
+        joinDate: t.profile?.created_at || '',
+        status: 'active',
+        bio: t.bio || '',
+    }));
+
+    // Filter teachers (search is handled by hook, but we filter locally for subject if needed)
+    const filteredTeachers = teachersData;
 
     // Pagination
     const totalPages = Math.ceil(filteredTeachers.length / itemsPerPage);
@@ -158,6 +106,50 @@ export default function TeachersPage() {
             prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id]
         );
     };
+
+    // Delete single teacher
+    const handleDeleteTeacher = async (id: string) => {
+        if (confirm('Are you sure you want to delete this teacher?')) {
+            const result = await deleteTeacher(id);
+            if (!result.success) {
+                alert(result.error || 'Failed to delete teacher');
+            }
+        }
+    };
+
+    // Bulk delete teachers
+    const handleBulkDelete = async () => {
+        if (confirm(`Are you sure you want to delete ${selectedTeachers.length} teachers?`)) {
+            for (const id of selectedTeachers) {
+                await deleteTeacher(id);
+            }
+            setSelectedTeachers([]);
+        }
+    };
+
+    // Loading state
+    if (isLoading) {
+        return (
+            <div className="flex items-center justify-center min-h-[400px]">
+                <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+            </div>
+        );
+    }
+
+    // Error state
+    if (error) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[400px] text-center">
+                <p className="text-red-500 mb-4">{error}</p>
+                <button
+                    onClick={refetch}
+                    className="px-4 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600"
+                >
+                    Try Again
+                </button>
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-6">
@@ -319,11 +311,10 @@ export default function TeachersPage() {
                                     <td className="px-6 py-4">
                                         <Link href={`/admin/teachers/${teacher.id}`}>
                                             <div className="flex items-center gap-3 group">
-                                                <img
+                                                <UserAvatar
                                                     src={teacher.avatar}
-                                                    alt={teacher.name}
-                                                    loading="lazy"
-                                                    className="w-10 h-10 rounded-full object-cover"
+                                                    name={teacher.name}
+                                                    className="w-10 h-10 rounded-full"
                                                 />
                                                 <div>
                                                     <p className="font-semibold text-gray-900 group-hover:text-blue-500 transition-colors">
@@ -394,6 +385,7 @@ export default function TeachersPage() {
                                             <motion.button
                                                 whileHover={{ scale: 1.1 }}
                                                 whileTap={{ scale: 0.9 }}
+                                                onClick={() => handleDeleteTeacher(teacher.id)}
                                                 className="p-2 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 transition-colors"
                                             >
                                                 <Trash2 className="w-4 h-4" />
@@ -470,7 +462,7 @@ export default function TeachersPage() {
             </motion.div>
 
             {/* Add Teacher Modal */}
-            <AddTeacherModal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} />
+            <AddTeacherModal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} onSubmit={handleAddTeacher} />
         </div>
     );
 }

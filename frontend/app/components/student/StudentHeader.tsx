@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { Bell, ChevronDown, Menu, Play, Flame, Zap } from 'lucide-react';
 import SearchBar from '../shared/SearchBar';
+import { UserAvatar } from '../shared/UserAvatar';
 
 interface StudentHeaderProps {
     onMenuClick: () => void;
@@ -137,10 +138,10 @@ export default function StudentHeader({ onMenuClick }: StudentHeaderProps) {
                             onClick={() => setShowProfileMenu(!showProfileMenu)}
                             className="flex items-center gap-3 p-2 pr-3 rounded-xl hover:bg-emerald-50 transition-colors"
                         >
-                            <img
-                                src="https://i.pravatar.cc/150?img=33"
-                                alt="Student"
-                                className="w-9 h-9 rounded-xl object-cover ring-2 ring-emerald-200"
+                            <UserAvatar
+                                src={null}
+                                name="Omar Ahmed"
+                                className="w-9 h-9 rounded-xl ring-2 ring-emerald-200"
                             />
                             <div className="hidden md:block text-left">
                                 <p className="text-sm font-semibold text-gray-900">Omar Ahmed</p>

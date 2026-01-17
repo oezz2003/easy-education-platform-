@@ -7,6 +7,7 @@ import { X, User, Mail, Phone, Users, GraduationCap, Upload, Check } from 'lucid
 interface AddStudentModalProps {
     isOpen: boolean;
     onClose: () => void;
+    onSubmit?: (data: { name: string; email: string; phone: string; level: string; parentPhone: string }) => Promise<{ success: boolean; error?: string }>;
 }
 
 const levels = [
@@ -15,7 +16,7 @@ const levels = [
     { id: 'secondary', name: 'Secondary', icon: '/ASSITS/gradution.png' },
 ];
 
-export default function AddStudentModal({ isOpen, onClose }: AddStudentModalProps) {
+export default function AddStudentModal({ isOpen, onClose, onSubmit }: AddStudentModalProps) {
     const [formData, setFormData] = useState({
         name: '',
         email: '',
@@ -26,6 +27,7 @@ export default function AddStudentModal({ isOpen, onClose }: AddStudentModalProp
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setFormData((prev) => ({
@@ -37,26 +39,47 @@ export default function AddStudentModal({ isOpen, onClose }: AddStudentModalProp
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSubmitting(true);
+        setError(null);
 
-        // Simulate API call
-        await new Promise((resolve) => setTimeout(resolve, 1500));
+        try {
+            if (onSubmit) {
+                // Use real Supabase callback
+                const result = await onSubmit({
+                    name: formData.name,
+                    email: formData.email,
+                    phone: formData.phone,
+                    level: formData.level,
+                    parentPhone: formData.parentPhone,
+                });
+                if (!result.success) {
+                    setError(result.error || 'Failed to add student');
+                    setIsSubmitting(false);
+                    return;
+                }
+            } else {
+                // Fallback mock
+                await new Promise((resolve) => setTimeout(resolve, 1500));
+            }
 
-        setIsSubmitting(false);
-        setIsSuccess(true);
+            setIsSubmitting(false);
+            setIsSuccess(true);
 
-        // Reset and close after success
-        setTimeout(() => {
-            setIsSuccess(false);
-            setFormData({
-                name: '',
-                email: '',
-                phone: '',
-                level: '',
-                parentName: '',
-                parentPhone: '',
-            });
-            onClose();
-        }, 1500);
+            setTimeout(() => {
+                setIsSuccess(false);
+                setFormData({
+                    name: '',
+                    email: '',
+                    phone: '',
+                    level: '',
+                    parentName: '',
+                    parentPhone: '',
+                });
+                onClose();
+            }, 1500);
+        } catch (err) {
+            setError('An error occurred');
+            setIsSubmitting(false);
+        }
     };
 
     const isValid =
@@ -209,8 +232,8 @@ export default function AddStudentModal({ isOpen, onClose }: AddStudentModalProp
                                                             setFormData((prev) => ({ ...prev, level: level.id }))
                                                         }
                                                         className={`p-3 rounded-xl border-2 flex flex-col items-center gap-2 transition-all ${formData.level === level.id
-                                                                ? 'border-emerald-500 bg-emerald-50'
-                                                                : 'border-gray-200 hover:border-gray-300'
+                                                            ? 'border-emerald-500 bg-emerald-50'
+                                                            : 'border-gray-200 hover:border-gray-300'
                                                             }`}
                                                     >
                                                         <img
@@ -220,8 +243,8 @@ export default function AddStudentModal({ isOpen, onClose }: AddStudentModalProp
                                                         />
                                                         <span
                                                             className={`text-xs font-medium ${formData.level === level.id
-                                                                    ? 'text-emerald-600'
-                                                                    : 'text-gray-600'
+                                                                ? 'text-emerald-600'
+                                                                : 'text-gray-600'
                                                                 }`}
                                                         >
                                                             {level.name}
@@ -272,8 +295,8 @@ export default function AddStudentModal({ isOpen, onClose }: AddStudentModalProp
                                         whileHover={{ scale: isValid ? 1.02 : 1 }}
                                         whileTap={{ scale: isValid ? 0.98 : 1 }}
                                         className={`w-full py-4 rounded-xl font-bold text-lg transition-all flex items-center justify-center gap-2 ${isValid
-                                                ? 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg hover:shadow-xl'
-                                                : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                            ? 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg hover:shadow-xl'
+                                            : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                                             }`}
                                     >
                                         {isSubmitting ? (

@@ -25,8 +25,14 @@ import {
     ExternalLink,
     Search,
     UserPlus,
-    Mail
+    Mail,
+    Loader2
 } from 'lucide-react';
+import { useSessions } from '@/hooks/useSessions';
+import { useTeachers } from '@/hooks/useTeachers';
+import { useCourses } from '@/hooks/useCourses';
+import { useBatches } from '@/hooks/useBatches';
+import { useStudents } from '@/hooks/useStudents';
 
 // Types
 interface Student {
@@ -81,85 +87,7 @@ interface Session {
 }
 
 // Mock data
-const teachers: Teacher[] = [
-    { id: '1', name: 'Ahmed Hassan', avatar: 'https://i.pravatar.cc/150?img=11', subject: 'Mathematics', color: '#10b981', availability: [{ day: 1, slots: ['09:00', '10:00', '14:00', '15:00'] }, { day: 3, slots: ['09:00', '11:00'] }, { day: 5, slots: ['10:00', '14:00'] }] },
-    { id: '2', name: 'Sara Ali', avatar: 'https://i.pravatar.cc/150?img=5', subject: 'Physics', color: '#3b82f6', availability: [{ day: 1, slots: ['11:00', '15:00'] }, { day: 2, slots: ['09:00', '10:00'] }, { day: 4, slots: ['14:00', '16:00'] }] },
-    { id: '3', name: 'Mohamed Farid', avatar: 'https://i.pravatar.cc/150?img=12', subject: 'English', color: '#8b5cf6', availability: [{ day: 2, slots: ['08:00', '09:00'] }, { day: 3, slots: ['14:00', '15:00'] }, { day: 5, slots: ['11:00'] }] },
-    { id: '4', name: 'Fatma Nour', avatar: 'https://i.pravatar.cc/150?img=9', subject: 'Chemistry', color: '#f59e0b', availability: [{ day: 1, slots: ['13:00'] }, { day: 4, slots: ['09:00', '10:00', '11:00'] }] },
-];
-
-const courses: Course[] = [
-    { id: '1', name: 'Advanced Mathematics', subject: 'Mathematics', teacherId: '1', batchId: 'B1', batchName: 'Batch 2026-A', students: ['s1', 's2', 's3', 's4', 's5'] },
-    { id: '2', name: 'Physics Fundamentals', subject: 'Physics', teacherId: '2', batchId: 'B2', batchName: 'Batch 2026-B', students: ['s2', 's3', 's6', 's7'] },
-    { id: '3', name: 'English Grammar', subject: 'English', teacherId: '3', batchId: 'B3', batchName: 'Batch 2026-A', students: ['s1', 's4', 's5', 's8'] },
-    { id: '4', name: 'Chemistry Lab', subject: 'Chemistry', teacherId: '4', batchId: 'B4', batchName: 'Batch 2026-C', students: ['s3', 's6', 's9', 's10'] },
-    { id: '5', name: 'Algebra Basics', subject: 'Mathematics', teacherId: '1', batchId: 'B5', batchName: 'Batch 2026-B', students: ['s7', 's8', 's9'] },
-];
-
-const students: Student[] = [
-    { id: 's1', name: 'Omar Khaled', avatar: 'https://i.pravatar.cc/150?img=1', email: 'omar@edu.com', enrolled: false },
-    { id: 's2', name: 'Fatma Ahmed', avatar: 'https://i.pravatar.cc/150?img=2', email: 'fatma@edu.com', enrolled: false },
-    { id: 's3', name: 'Youssef Ibrahim', avatar: 'https://i.pravatar.cc/150?img=3', email: 'youssef@edu.com', enrolled: false },
-    { id: 's4', name: 'Sara Mohamed', avatar: 'https://i.pravatar.cc/150?img=4', email: 'sara@edu.com', enrolled: false },
-    { id: 's5', name: 'Ali Hassan', avatar: 'https://i.pravatar.cc/150?img=5', email: 'ali@edu.com', enrolled: false },
-    { id: 's6', name: 'Laila Nour', avatar: 'https://i.pravatar.cc/150?img=6', email: 'laila@edu.com', enrolled: false },
-    { id: 's7', name: 'Mohamed Salem', avatar: 'https://i.pravatar.cc/150?img=7', email: 'msalem@edu.com', enrolled: false },
-    { id: 's8', name: 'Nadia Karim', avatar: 'https://i.pravatar.cc/150?img=8', email: 'nadia@edu.com', enrolled: false },
-    { id: 's9', name: 'Khaled Farid', avatar: 'https://i.pravatar.cc/150?img=9', email: 'khaled@edu.com', enrolled: false },
-    { id: 's10', name: 'Mona Ali', avatar: 'https://i.pravatar.cc/150?img=10', email: 'mona@edu.com', enrolled: false },
-];
-
 const generateMeetLink = () => `https://meet.google.com/${Math.random().toString(36).substring(2, 5)}-${Math.random().toString(36).substring(2, 6)}-${Math.random().toString(36).substring(2, 5)}`;
-
-// Initial sessions
-const initialSessions: Session[] = [
-    {
-        id: '1',
-        title: 'Algebra Fundamentals',
-        description: 'Introduction to algebraic expressions and equations',
-        teacherId: '1',
-        teacherName: 'Ahmed Hassan',
-        teacherAvatar: 'https://i.pravatar.cc/150?img=11',
-        courseId: '1',
-        courseName: 'Advanced Mathematics',
-        batchName: 'Batch 2026-A',
-        subject: 'Mathematics',
-        date: new Date(2026, 0, 7),
-        startTime: '09:00',
-        endTime: '10:30',
-        duration: 90,
-        maxAttendees: 30,
-        invitedStudents: ['s1', 's2', 's3', 's4', 's5'],
-        status: 'live',
-        meetLink: generateMeetLink(),
-        color: '#10b981',
-        recurring: true,
-        recurringDays: [1, 3, 5],
-    },
-    {
-        id: '2',
-        title: 'Physics Lab Practice',
-        description: 'Hands-on physics experiments and demonstrations',
-        teacherId: '2',
-        teacherName: 'Sara Ali',
-        teacherAvatar: 'https://i.pravatar.cc/150?img=5',
-        courseId: '2',
-        courseName: 'Physics Fundamentals',
-        batchName: 'Batch 2026-B',
-        subject: 'Physics',
-        date: new Date(2026, 0, 7),
-        startTime: '11:00',
-        endTime: '12:30',
-        duration: 90,
-        maxAttendees: 25,
-        invitedStudents: ['s2', 's3', 's6', 's7'],
-        status: 'scheduled',
-        meetLink: generateMeetLink(),
-        color: '#3b82f6',
-        recurring: false,
-        recurringDays: [],
-    },
-];
 
 // Helper functions
 const getWeekDays = (date: Date) => {
@@ -177,8 +105,7 @@ const timeSlots = Array.from({ length: 12 }, (_, i) => `${(i + 8).toString().pad
 const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 export default function LiveSessionsPage() {
-    const [currentDate, setCurrentDate] = useState(new Date(2026, 0, 7));
-    const [sessions, setSessions] = useState<Session[]>(initialSessions);
+    const [currentDate, setCurrentDate] = useState(new Date());
     const [filterTeacher, setFilterTeacher] = useState<string>('all');
     const [filterCourse, setFilterCourse] = useState<string>('all');
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -188,6 +115,75 @@ export default function LiveSessionsPage() {
     const [copiedLink, setCopiedLink] = useState(false);
     const [modalStep, setModalStep] = useState(1);
     const [studentSearch, setStudentSearch] = useState('');
+
+    // Hooks for real data
+    const { sessions: rawSessions, isLoading: sessionsLoading, error: sessionsError, createSession: createSessionHook, deleteSession: deleteSessionHook, updateSession, refetch: refetchSessions } = useSessions();
+    const { teachers: rawTeachers } = useTeachers();
+    const { courses: rawCourses } = useCourses();
+    const { batches: rawBatches } = useBatches();
+    const { students: rawStudents } = useStudents();
+
+    // Transform teachers
+    const teachers: Teacher[] = rawTeachers.map(t => ({
+        id: t.id,
+        name: t.profile?.full_name || 'Unknown',
+        avatar: t.profile?.avatar_url || `https://i.pravatar.cc/150?u=${t.id}`,
+        subject: t.subject || 'General',
+        color: '#10b981',
+        availability: [],
+    }));
+
+    // Transform courses with batch info
+    const courses: Course[] = rawCourses.map(c => {
+        const batch = rawBatches.find(b => b.course_id === c.id);
+        return {
+            id: c.id,
+            name: c.name,
+            subject: c.subject || 'General',
+            teacherId: batch?.teacher_id || '',
+            batchId: batch?.id || '',
+            batchName: batch?.name || 'No Batch',
+            students: [],
+        };
+    });
+
+    // Transform students
+    const students: Student[] = rawStudents.map(s => ({
+        id: s.id,
+        name: s.profile?.full_name || 'Unknown',
+        avatar: s.profile?.avatar_url || `https://i.pravatar.cc/150?u=${s.id}`,
+        email: s.profile?.email || '',
+        enrolled: false,
+    }));
+
+    // Transform sessions
+    const sessions: Session[] = rawSessions.map(s => {
+        const teacher = teachers.find(t => t.id === (s as any).teacher_id);
+        const course = courses.find(c => c.batchId === (s as any).batch_id);
+        return {
+            id: s.id,
+            title: s.title,
+            description: s.description || '',
+            teacherId: (s as any).teacher_id || '',
+            teacherName: teacher?.name || 'Unknown',
+            teacherAvatar: teacher?.avatar || '',
+            courseId: course?.id || '',
+            courseName: course?.name || 'Unknown Course',
+            batchName: course?.batchName || 'Unknown Batch',
+            subject: teacher?.subject || 'General',
+            date: new Date(s.session_date),
+            startTime: s.start_time,
+            endTime: s.end_time,
+            duration: 60,
+            maxAttendees: 30,
+            invitedStudents: [],
+            status: s.status as 'scheduled' | 'live' | 'completed' | 'cancelled',
+            meetLink: (s as any).meet_link || `https://meet.google.com/${Math.random().toString(36).substring(2, 8)}`,
+            color: teacher?.color || '#10b981',
+            recurring: false,
+            recurringDays: [],
+        };
+    });
 
     // New session form
     const [newSession, setNewSession] = useState({
@@ -212,6 +208,30 @@ export default function LiveSessionsPage() {
         setCurrentDate(newDate);
     };
 
+    // Loading state
+    if (sessionsLoading) {
+        return (
+            <div className="flex items-center justify-center min-h-[400px]">
+                <Loader2 className="w-8 h-8 animate-spin text-red-500" />
+            </div>
+        );
+    }
+
+    // Error state
+    if (sessionsError) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[400px] text-center">
+                <p className="text-red-500 mb-4">{sessionsError}</p>
+                <button
+                    onClick={refetchSessions}
+                    className="px-4 py-2 bg-red-500 text-white rounded-xl hover:bg-red-600"
+                >
+                    Try Again
+                </button>
+            </div>
+        );
+    }
+
     const getSessionsForSlot = (day: Date, time: string) => {
         return sessions.filter(s => {
             if (!isSameDay(s.date, day)) return false;
@@ -224,16 +244,16 @@ export default function LiveSessionsPage() {
     const handleDragStart = (session: Session) => setDraggedSession(session);
     const handleDragOver = (e: React.DragEvent) => e.preventDefault();
 
-    const handleDrop = (day: Date, time: string) => {
+    const handleDrop = async (day: Date, time: string) => {
         if (!draggedSession) return;
-        const updatedSessions = sessions.map(s => {
-            if (s.id === draggedSession.id) {
-                return { ...s, date: day, startTime: time, endTime: `${parseInt(time.split(':')[0]) + Math.ceil(s.duration / 60)}:00` };
-            }
-            return s;
-        });
-        setSessions(updatedSessions);
+        // Update session via hook
+        await updateSession(draggedSession.id, {
+            session_date: day.toISOString().split('T')[0],
+            start_time: time,
+            end_time: `${parseInt(time.split(':')[0]) + Math.ceil(draggedSession.duration / 60)}:00`,
+        } as any);
         setDraggedSession(null);
+        refetchSessions();
     };
 
     const openSessionModal = (session: Session) => {
@@ -278,13 +298,11 @@ export default function LiveSessionsPage() {
         return courses.filter(c => c.teacherId === newSession.teacherId);
     };
 
-    // Get students for selected course
-    const getCourseStudents = () => {
-        if (!newSession.courseId) return [];
-        const course = courses.find(c => c.id === newSession.courseId);
-        if (!course) return [];
-        return students.filter(s => course.students.includes(s.id));
-    };
+    // Get all students filtered by search
+    const filteredStudents = students.filter(s =>
+        s.name.toLowerCase().includes(studentSearch.toLowerCase()) ||
+        s.email.toLowerCase().includes(studentSearch.toLowerCase())
+    );
 
     const toggleStudent = (studentId: string) => {
         if (newSession.invitedStudents.includes(studentId)) {
@@ -295,45 +313,36 @@ export default function LiveSessionsPage() {
     };
 
     const selectAllStudents = () => {
-        const courseStudents = getCourseStudents();
-        setNewSession({ ...newSession, invitedStudents: courseStudents.map(s => s.id) });
+        setNewSession({ ...newSession, invitedStudents: filteredStudents.map(s => s.id) });
     };
 
-    const handleCreateSession = () => {
+    const handleCreateSession = async () => {
         const teacher = teachers.find(t => t.id === newSession.teacherId);
         const course = courses.find(c => c.id === newSession.courseId);
         if (!teacher || !course || !newSession.title) return;
 
-        const session: Session = {
-            id: Date.now().toString(),
+        const endTime = `${parseInt(newSession.startTime.split(':')[0]) + Math.ceil(newSession.duration / 60)}:00`;
+
+        await createSessionHook({
+            batch_id: course.batchId,
+            teacher_id: teacher.id,
             title: newSession.title,
             description: newSession.description,
-            teacherId: teacher.id,
-            teacherName: teacher.name,
-            teacherAvatar: teacher.avatar,
-            courseId: course.id,
-            courseName: course.name,
-            batchName: course.batchName,
-            subject: teacher.subject,
-            date: new Date(newSession.date),
-            startTime: newSession.startTime,
-            endTime: `${parseInt(newSession.startTime.split(':')[0]) + Math.ceil(newSession.duration / 60)}:00`,
-            duration: newSession.duration,
-            maxAttendees: newSession.maxAttendees,
-            invitedStudents: newSession.invitedStudents,
+            session_date: newSession.date,
+            start_time: newSession.startTime,
+            end_time: endTime,
+            meet_link: generateMeetLink(),
             status: 'scheduled',
-            meetLink: generateMeetLink(),
-            color: teacher.color,
-            recurring: newSession.recurring,
-            recurringDays: newSession.recurringDays,
-        };
+            invited_students: newSession.invitedStudents,
+        } as any);
 
-        setSessions([...sessions, session]);
+        refetchSessions();
         setIsModalOpen(false);
     };
 
-    const deleteSession = (id: string) => {
-        setSessions(sessions.filter(s => s.id !== id));
+    const handleDeleteSession = async (id: string) => {
+        await deleteSessionHook(id);
+        refetchSessions();
         setIsModalOpen(false);
     };
 
@@ -351,10 +360,6 @@ export default function LiveSessionsPage() {
 
     const availableSlots = getTeacherAvailability();
     const teacherCourses = getTeacherCourses();
-    const courseStudents = getCourseStudents().filter(s =>
-        s.name.toLowerCase().includes(studentSearch.toLowerCase()) ||
-        s.email.toLowerCase().includes(studentSearch.toLowerCase())
-    );
 
     return (
         <div className="space-y-6">
@@ -615,7 +620,7 @@ export default function LiveSessionsPage() {
                                                         <input type="text" placeholder="Search students..." value={studentSearch} onChange={(e) => setStudentSearch(e.target.value)} className="w-full pl-12 pr-4 py-3 rounded-xl border border-gray-200" />
                                                     </div>
                                                     <div className="max-h-60 overflow-y-auto space-y-2">
-                                                        {courseStudents.map((student) => (
+                                                        {filteredStudents.map((student) => (
                                                             <label key={student.id} className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${newSession.invitedStudents.includes(student.id) ? 'border-red-500 bg-red-50' : 'border-gray-200 hover:border-gray-300'}`}>
                                                                 <input type="checkbox" checked={newSession.invitedStudents.includes(student.id)} onChange={() => toggleStudent(student.id)} className="w-5 h-5 rounded text-red-500" />
                                                                 <img src={student.avatar} alt="" className="w-10 h-10 rounded-xl" />
@@ -694,7 +699,7 @@ export default function LiveSessionsPage() {
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-3">
-                                                <motion.button whileTap={{ scale: 0.98 }} onClick={() => deleteSession(selectedSession.id)} className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 border border-red-200 text-red-500 hover:bg-red-50 rounded-xl font-medium">
+                                                <motion.button whileTap={{ scale: 0.98 }} onClick={() => handleDeleteSession(selectedSession.id)} className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 border border-red-200 text-red-500 hover:bg-red-50 rounded-xl font-medium">
                                                     <Trash2 className="w-4 h-4" /> Delete
                                                 </motion.button>
                                                 <Link href={`/admin/live-sessions/${selectedSession.id}`} className="flex-1">

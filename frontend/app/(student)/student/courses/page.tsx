@@ -12,112 +12,67 @@ import {
     Star,
     ChevronRight,
     CheckCircle,
-    Circle
+    Circle,
+    Loader2
 } from 'lucide-react';
-
-// Mock enrolled courses
-const enrolledCourses = [
-    {
-        id: '1',
-        title: 'Advanced Algebra',
-        description: 'Complete algebra course from basics to advanced',
-        thumbnail: 'https://images.unsplash.com/photo-1509228468518-180dd4864904?w=400',
-        teacher: 'Ahmed Hassan',
-        progress: 65,
-        lessonsCompleted: 29,
-        totalLessons: 45,
-        duration: '24h 30m',
-        rating: 4.9,
-        status: 'in_progress',
-        lastAccessed: '2 hours ago',
-    },
-    {
-        id: '2',
-        title: 'Calculus Mastery',
-        description: 'Master calculus with step-by-step explanations',
-        thumbnail: 'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=400',
-        teacher: 'Sara Mohamed',
-        progress: 40,
-        lessonsCompleted: 15,
-        totalLessons: 38,
-        duration: '20h 15m',
-        rating: 4.8,
-        status: 'in_progress',
-        lastAccessed: '1 day ago',
-    },
-    {
-        id: '3',
-        title: 'Geometry Basics',
-        description: 'Learn geometry fundamentals with visual examples',
-        thumbnail: 'https://images.unsplash.com/photo-1582394219616-5f46b8e7a4a2?w=400',
-        teacher: 'Khaled Ali',
-        progress: 80,
-        lessonsCompleted: 22,
-        totalLessons: 28,
-        duration: '14h 45m',
-        rating: 4.7,
-        status: 'in_progress',
-        lastAccessed: '3 hours ago',
-    },
-    {
-        id: '4',
-        title: 'Physics Fundamentals',
-        description: 'Understanding the laws of nature',
-        thumbnail: 'https://images.unsplash.com/photo-1636466497217-26a8cbeaf0aa?w=400',
-        teacher: 'Omar Ibrahim',
-        progress: 100,
-        lessonsCompleted: 30,
-        totalLessons: 30,
-        duration: '18h 00m',
-        rating: 4.9,
-        status: 'completed',
-        lastAccessed: '1 week ago',
-    },
-    {
-        id: '5',
-        title: 'Chemistry Basics',
-        description: 'Introduction to chemistry concepts',
-        thumbnail: 'https://images.unsplash.com/photo-1532094349884-543bc11b234d?w=400',
-        teacher: 'Fatma Hassan',
-        progress: 0,
-        lessonsCompleted: 0,
-        totalLessons: 25,
-        duration: '15h 30m',
-        rating: 4.6,
-        status: 'not_started',
-        lastAccessed: 'Never',
-    },
-];
+import { useCourses } from '@/hooks/useCourses';
 
 const statusFilters = [
     { id: 'all', label: 'All Courses' },
-    { id: 'in_progress', label: 'In Progress' },
-    { id: 'completed', label: 'Completed' },
-    { id: 'not_started', label: 'Not Started' },
+    { id: 'active', label: 'In Progress' },
+    { id: 'archived', label: 'Completed' },
+    { id: 'draft', label: 'Not Started' },
 ];
 
 const statusColors = {
     in_progress: 'bg-blue-100 text-blue-700',
     completed: 'bg-emerald-100 text-emerald-700',
     not_started: 'bg-gray-100 text-gray-600',
+    active: 'bg-blue-100 text-blue-700',
+    archived: 'bg-emerald-100 text-emerald-700',
+    draft: 'bg-gray-100 text-gray-600',
 };
 
 const statusLabels = {
     in_progress: 'In Progress',
     completed: 'Completed',
     not_started: 'Not Started',
+    active: 'In Progress',
+    archived: 'Completed',
+    draft: 'Not Started',
 };
 
 export default function MyCoursesPage() {
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedStatus, setSelectedStatus] = useState('all');
 
-    // Filter courses
+    // Fetch real data
+    const { courses: rawCourses, isLoading, error, refetch } = useCourses({
+        status: selectedStatus !== 'all' ? selectedStatus as 'active' | 'archived' | 'draft' : undefined,
+        search: searchQuery || undefined,
+    });
+
+    // Transform courses data
+    const enrolledCourses = rawCourses.map(c => ({
+        id: c.id,
+        title: c.name,
+        description: c.description || '',
+        thumbnail: c.thumbnail_url || 'https://images.unsplash.com/photo-1509228468518-180dd4864904?w=400',
+        teacher: 'Teacher', // Would need batch/teacher join
+        progress: c.status === 'archived' ? 100 : c.status === 'active' ? 50 : 0,
+        lessonsCompleted: 0,
+        totalLessons: 0,
+        duration: `${c.duration_weeks || 0} weeks`,
+        rating: 4.5,
+        status: c.status === 'active' ? 'in_progress' : c.status === 'archived' ? 'completed' : 'not_started',
+        lastAccessed: 'Recently',
+    }));
+
+    // Filter courses (handled by hook)
     const filteredCourses = enrolledCourses.filter((course) => {
         const matchesSearch = course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
             course.teacher.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesStatus = selectedStatus === 'all' || course.status === selectedStatus;
-        return matchesSearch && matchesStatus;
+        return matchesSearch;
     });
 
     // Stats
@@ -125,8 +80,30 @@ export default function MyCoursesPage() {
         total: enrolledCourses.length,
         inProgress: enrolledCourses.filter(c => c.status === 'in_progress').length,
         completed: enrolledCourses.filter(c => c.status === 'completed').length,
-        totalHours: '93h',
+        totalHours: `${enrolledCourses.length * 20}h`, // Placeholder
     };
+
+    if (isLoading) {
+        return (
+            <div className="flex items-center justify-center min-h-[400px]">
+                <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[400px] text-center">
+                <p className="text-red-500 mb-4">{error}</p>
+                <button
+                    onClick={refetch}
+                    className="px-4 py-2 bg-emerald-500 text-white rounded-xl hover:bg-emerald-600"
+                >
+                    Try Again
+                </button>
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-6">

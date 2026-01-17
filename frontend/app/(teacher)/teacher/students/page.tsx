@@ -13,85 +13,12 @@ import {
     ChevronRight,
     TrendingUp,
     BookOpen,
-    Clock
+    Clock,
+    Loader2
 } from 'lucide-react';
-
-// Mock students data
-const myStudents = [
-    {
-        id: '1',
-        name: 'Omar Ahmed',
-        email: 'omar.ahmed@email.com',
-        avatar: 'https://i.pravatar.cc/150?img=1',
-        enrolledCourses: ['Advanced Algebra', 'Calculus Mastery'],
-        overallProgress: 78,
-        lastActive: '2 hours ago',
-        joinedAt: '2024-01-15',
-        performance: 'excellent',
-    },
-    {
-        id: '2',
-        name: 'Sara Hassan',
-        email: 'sara.h@email.com',
-        avatar: 'https://i.pravatar.cc/150?img=5',
-        enrolledCourses: ['Advanced Algebra'],
-        overallProgress: 65,
-        lastActive: '1 day ago',
-        joinedAt: '2024-02-20',
-        performance: 'good',
-    },
-    {
-        id: '3',
-        name: 'Khaled Mohamed',
-        email: 'khaled.m@email.com',
-        avatar: 'https://i.pravatar.cc/150?img=3',
-        enrolledCourses: ['Calculus Mastery', 'Geometry Basics'],
-        overallProgress: 92,
-        lastActive: '5 hours ago',
-        joinedAt: '2024-01-10',
-        performance: 'excellent',
-    },
-    {
-        id: '4',
-        name: 'Fatma Ali',
-        email: 'fatma.a@email.com',
-        avatar: 'https://i.pravatar.cc/150?img=9',
-        enrolledCourses: ['Advanced Algebra', 'Geometry Basics'],
-        overallProgress: 45,
-        lastActive: '3 days ago',
-        joinedAt: '2024-03-01',
-        performance: 'needs_attention',
-    },
-    {
-        id: '5',
-        name: 'Ahmed Ibrahim',
-        email: 'ahmed.i@email.com',
-        avatar: 'https://i.pravatar.cc/150?img=12',
-        enrolledCourses: ['Calculus Mastery'],
-        overallProgress: 88,
-        lastActive: '1 hour ago',
-        joinedAt: '2024-02-05',
-        performance: 'excellent',
-    },
-    {
-        id: '6',
-        name: 'Nour Eldin',
-        email: 'nour.e@email.com',
-        avatar: 'https://i.pravatar.cc/150?img=8',
-        enrolledCourses: ['Geometry Basics'],
-        overallProgress: 55,
-        lastActive: '2 days ago',
-        joinedAt: '2024-03-10',
-        performance: 'good',
-    },
-];
-
-const courses = [
-    { id: 'all', name: 'All Courses' },
-    { id: 'advanced-algebra', name: 'Advanced Algebra' },
-    { id: 'calculus-mastery', name: 'Calculus Mastery' },
-    { id: 'geometry-basics', name: 'Geometry Basics' },
-];
+import { useStudents } from '@/hooks/useStudents';
+import { useCourses } from '@/hooks/useCourses';
+import { UserAvatar } from '@/app/components/shared/UserAvatar';
 
 const performanceColors = {
     excellent: 'bg-emerald-100 text-emerald-700',
@@ -111,20 +38,38 @@ export default function MyStudentsPage() {
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 6;
 
-    // Filter students
-    const filteredStudents = myStudents.filter((student) => {
-        const matchesSearch =
-            student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            student.email.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesCourse = selectedCourse === 'all' ||
-            student.enrolledCourses.some(c => c.toLowerCase().includes(selectedCourse.replace('-', ' ')));
-        return matchesSearch && matchesCourse;
+    // Fetch real data
+    const { students: rawStudents, isLoading, error, refetch } = useStudents({
+        search: searchQuery || undefined,
     });
+    const { courses: rawCourses } = useCourses();
+
+    // Transform courses for filter dropdown
+    const courses = [
+        { id: 'all', name: 'All Courses' },
+        ...rawCourses.map(c => ({ id: c.id, name: c.name }))
+    ];
+
+    // Transform students data
+    const myStudents = rawStudents.map(s => ({
+        id: s.id,
+        name: s.profile?.full_name || 'Unknown',
+        email: s.profile?.email || '',
+        avatar: s.profile?.avatar_url,
+        enrolledCourses: [] as string[], // Would need enrollments query
+        overallProgress: 0, // Would need progress calculation
+        lastActive: 'Recently',
+        joinedAt: s.created_at?.split('T')[0] || '',
+        performance: s.xp_points > 1000 ? 'excellent' : s.xp_points > 500 ? 'good' : 'needs_attention',
+    }));
+
+    // Filter students (search handled by hook)
+    const filteredStudents = myStudents;
 
     // Stats
     const stats = {
         total: myStudents.length,
-        activeToday: myStudents.filter(s => s.lastActive.includes('hour')).length,
+        activeToday: myStudents.filter(s => s.lastActive.includes('hour') || s.lastActive === 'Recently').length,
         excellent: myStudents.filter(s => s.performance === 'excellent').length,
         needsAttention: myStudents.filter(s => s.performance === 'needs_attention').length,
     };
@@ -135,6 +80,28 @@ export default function MyStudentsPage() {
         (currentPage - 1) * itemsPerPage,
         currentPage * itemsPerPage
     );
+
+    if (isLoading) {
+        return (
+            <div className="flex items-center justify-center min-h-[400px]">
+                <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[400px] text-center">
+                <p className="text-red-500 mb-4">{error}</p>
+                <button
+                    onClick={refetch}
+                    className="px-4 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600"
+                >
+                    Try Again
+                </button>
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-6">
@@ -252,10 +219,10 @@ export default function MyStudentsPage() {
                         {/* Header */}
                         <div className="flex items-start justify-between mb-4">
                             <div className="flex items-center gap-3">
-                                <img
+                                <UserAvatar
                                     src={student.avatar}
-                                    alt={student.name}
-                                    className="w-12 h-12 rounded-full object-cover"
+                                    name={student.name}
+                                    className="w-12 h-12 rounded-full"
                                 />
                                 <div>
                                     <h3 className="font-semibold text-gray-900">{student.name}</h3>

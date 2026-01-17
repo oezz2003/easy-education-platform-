@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, BookOpen, FileText, DollarSign, Clock, Users, Tag, Upload, Check, ChevronRight, ChevronLeft } from 'lucide-react';
+import { UserAvatar } from '../shared/UserAvatar';
 
 interface AddCourseModalProps {
     isOpen: boolean;
@@ -24,9 +25,9 @@ const subjects = [
 ];
 
 const teachers = [
-    { id: '1', name: 'Ahmed Hassan', avatar: 'https://i.pravatar.cc/150?img=11', subject: 'Mathematics' },
-    { id: '2', name: 'Sara Ali', avatar: 'https://i.pravatar.cc/150?img=5', subject: 'Physics' },
-    { id: '3', name: 'Mohamed Farid', avatar: 'https://i.pravatar.cc/150?img=12', subject: 'English' },
+    { id: '1', name: 'Ahmed Hassan', avatar: null, subject: 'Mathematics' },
+    { id: '2', name: 'Sara Ali', avatar: null, subject: 'Physics' },
+    { id: '3', name: 'Mohamed Farid', avatar: null, subject: 'English' },
 ];
 
 export default function AddCourseModal({ isOpen, onClose }: AddCourseModalProps) {
@@ -161,8 +162,8 @@ export default function AddCourseModal({ isOpen, onClose }: AddCourseModalProps)
                                         whileTap={{ scale: 0.98 }}
                                         onClick={() => setFormData((prev) => ({ ...prev, level: level.id }))}
                                         className={`p-3 rounded-xl border-2 flex flex-col items-center gap-2 transition-all ${formData.level === level.id
-                                                ? 'border-purple-500 bg-purple-50'
-                                                : 'border-gray-200 hover:border-gray-300'
+                                            ? 'border-purple-500 bg-purple-50'
+                                            : 'border-gray-200 hover:border-gray-300'
                                             }`}
                                     >
                                         <img src={level.icon} alt="" className="w-8 h-8 object-contain" />
@@ -186,8 +187,8 @@ export default function AddCourseModal({ isOpen, onClose }: AddCourseModalProps)
                                         whileTap={{ scale: 0.98 }}
                                         onClick={() => setFormData((prev) => ({ ...prev, subject: subject.id }))}
                                         className={`p-3 rounded-xl border-2 flex flex-col items-center gap-2 transition-all ${formData.subject === subject.id
-                                                ? 'border-purple-500 bg-purple-50'
-                                                : 'border-gray-200 hover:border-gray-300'
+                                            ? 'border-purple-500 bg-purple-50'
+                                            : 'border-gray-200 hover:border-gray-300'
                                             }`}
                                     >
                                         <img src={subject.icon} alt="" className="w-6 h-6 object-contain" />
@@ -222,11 +223,15 @@ export default function AddCourseModal({ isOpen, onClose }: AddCourseModalProps)
                                     whileTap={{ scale: 0.99 }}
                                     onClick={() => setFormData((prev) => ({ ...prev, teacherId: teacher.id }))}
                                     className={`w-full p-4 rounded-xl border-2 flex items-center gap-4 transition-all ${formData.teacherId === teacher.id
-                                            ? 'border-purple-500 bg-purple-50'
-                                            : 'border-gray-200 hover:border-gray-300'
+                                        ? 'border-purple-500 bg-purple-50'
+                                        : 'border-gray-200 hover:border-gray-300'
                                         }`}
                                 >
-                                    <img src={teacher.avatar} alt="" className="w-12 h-12 rounded-full" />
+                                    <UserAvatar
+                                        src={teacher.avatar}
+                                        name={teacher.name}
+                                        className="w-12 h-12 rounded-full"
+                                    />
                                     <div className="text-left">
                                         <p className="font-semibold text-gray-900">{teacher.name}</p>
                                         <p className="text-sm text-gray-500">{teacher.subject}</p>
