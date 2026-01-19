@@ -1,0 +1,5 @@
+app/(admin)/admin/dashboard/page.tsx(75,21): error TS2322: Type '(options?: RefetchOptions | undefined) => Promise<QueryObserverResult<AdminStats, Error>>' is not assignable to type 'MouseEventHandler<HTMLButtonElement>'.
+  Types of parameters 'options' and 'event' are incompatible.
+    Type 'MouseEvent<HTMLButtonElement, MouseEvent>' has no properties in common with type 'RefetchOptions'.
+app/(admin)/admin/teachers/page.tsx(109,25): error TS2339: Property 'success' does not exist on type 'void'.
+app/(admin)/admin/teachers/page.tsx(110,30): error TS2339: Property 'error' does not exist on type 'void'.

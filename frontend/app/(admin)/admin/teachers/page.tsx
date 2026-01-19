@@ -47,10 +47,12 @@ export default function TeachersPage() {
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 5;
 
-    // Use real data from hook
-    const { teachers: rawTeachers, isLoading, error, refetch, deleteTeacher, createTeacher } = useTeachers({
+    // Use real data from hook with pagination
+    const { teachers: rawTeachers, totalCount, totalPages, isLoading, error, refetch, deleteTeacher, createTeacher } = useTeachers({
         subject: selectedSubject !== 'all' ? selectedSubject : undefined,
         search: searchQuery || undefined,
+        page: currentPage,
+        limit: itemsPerPage,
     });
 
     // Handler for adding new teacher
@@ -83,15 +85,8 @@ export default function TeachersPage() {
         bio: t.bio || '',
     }));
 
-    // Filter teachers (search is handled by hook, but we filter locally for subject if needed)
-    const filteredTeachers = teachersData;
-
-    // Pagination
-    const totalPages = Math.ceil(filteredTeachers.length / itemsPerPage);
-    const paginatedTeachers = filteredTeachers.slice(
-        (currentPage - 1) * itemsPerPage,
-        currentPage * itemsPerPage
-    );
+    // Use server-side paginated data directly
+    const paginatedTeachers = teachersData;
 
     const toggleSelectAll = () => {
         if (selectedTeachers.length === paginatedTeachers.length) {
@@ -110,9 +105,10 @@ export default function TeachersPage() {
     // Delete single teacher
     const handleDeleteTeacher = async (id: string) => {
         if (confirm('Are you sure you want to delete this teacher?')) {
-            const result = await deleteTeacher(id);
-            if (!result.success) {
-                alert(result.error || 'Failed to delete teacher');
+            try {
+                await deleteTeacher(id);
+            } catch (err: any) {
+                alert(err.message || 'Failed to delete teacher');
             }
         }
     };
@@ -176,7 +172,7 @@ export default function TeachersPage() {
                             Teachers Management
                         </h1>
                         <p className="text-gray-500 text-sm">
-                            {filteredTeachers.length} teachers total
+                            {totalCount} teachers total
                         </p>
                     </div>
                 </div>
@@ -403,8 +399,8 @@ export default function TeachersPage() {
                     <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100">
                         <p className="text-sm text-gray-500">
                             Showing {(currentPage - 1) * itemsPerPage + 1} to{' '}
-                            {Math.min(currentPage * itemsPerPage, filteredTeachers.length)} of{' '}
-                            {filteredTeachers.length} teachers
+                            {Math.min(currentPage * itemsPerPage, totalCount)} of{' '}
+                            {totalCount} teachers
                         </p>
                         <div className="flex items-center gap-2">
                             <button
@@ -438,7 +434,7 @@ export default function TeachersPage() {
                 )}
 
                 {/* Empty State */}
-                {filteredTeachers.length === 0 && (
+                {paginatedTeachers.length === 0 && (
                     <div className="text-center py-16">
                         <motion.div
                             animate={{ y: [0, -10, 0] }}

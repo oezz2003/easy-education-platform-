@@ -72,7 +72,7 @@ export default function AdminDashboard() {
             <div className="flex flex-col items-center justify-center min-h-[400px] text-center">
                 <p className="text-red-500 mb-4">{error}</p>
                 <button
-                    onClick={refetch}
+                    onClick={() => refetch()}
                     className="px-4 py-2 bg-[var(--color-primary-500)] text-white rounded-xl hover:bg-[var(--color-primary-600)]"
                 >
                     Try Again

@@ -1,18 +1,12 @@
-'use client';
-
-import { useState, useEffect, useCallback } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import type { TeacherProfile, TeacherWithProfile, Profile } from '@/types/database';
-
-interface TeachersState {
-    teachers: TeacherWithProfile[];
-    isLoading: boolean;
-    error: string | null;
-}
 
 interface TeachersFilter {
     subject?: string;
     search?: string;
+    page?: number;
+    limit?: number;
 }
 
 interface CreateTeacherInput {
@@ -23,68 +17,54 @@ interface CreateTeacherInput {
     bio?: string;
 }
 
-export function useTeachers(filter?: TeachersFilter) {
-    const [state, setState] = useState<TeachersState>({
-        teachers: [],
-        isLoading: true,
-        error: null,
-    });
-
+export function useTeachers(filter: TeachersFilter = {}) {
     const supabase = getSupabaseClient();
+    const queryClient = useQueryClient();
+    const page = filter.page || 1;
+    const limit = filter.limit || 10;
 
-    // Fetch teachers
-    const fetchTeachers = useCallback(async () => {
-        const controller = new AbortController();
-        const signal = controller.signal;
+    // Fetch teachers with pagination
+    const fetchTeachers = async () => {
+        let query = supabase
+            .from('teacher_profiles')
+            .select(`
+                *,
+                profile:profiles!inner(*)
+            `, { count: 'exact' });
 
-        try {
-            setState(prev => ({ ...prev, isLoading: true }));
-
-            let query = supabase
-                .from('teacher_profiles')
-                .select(`
-                    *,
-                    profile:profiles!inner(*)
-                `)
-                .eq('profile.role', 'teacher')
-                .order('rating', { ascending: false });
-
-            // Apply filters
-            if (filter?.subject) {
-                query = query.eq('subject', filter.subject);
-            }
-            if (filter?.search) {
-                query = query.or(`profile.full_name.ilike.%${filter.search}%,subject.ilike.%${filter.search}%`);
-            }
-
-            const { data, error } = await query.abortSignal(signal);
-
-            if (!signal.aborted) {
-                if (error) {
-                    setState({ teachers: [], isLoading: false, error: error.message });
-                } else {
-                    setState({ teachers: data || [], isLoading: false, error: null });
-                }
-            }
-        } catch (err: any) {
-            if (err.name !== 'AbortError') {
-                setState(prev => ({ ...prev, isLoading: false, error: err.message }));
-            }
+        // Apply filters
+        if (filter.subject) {
+            query = query.eq('subject', filter.subject);
+        }
+        if (filter.search) {
+            query = query.or(`profile.full_name.ilike.%${filter.search}%,subject.ilike.%${filter.search}%`);
         }
 
-        return () => controller.abort();
-    }, [supabase, filter?.subject, filter?.search]);
+        // Apply pagination
+        const from = (page - 1) * limit;
+        const to = from + limit - 1;
 
-    useEffect(() => {
-        const abort = fetchTeachers();
-        return () => {
-            abort.then(cancel => cancel && cancel());
+        const { data, error, count } = await query
+            .order('rating', { ascending: false })
+            .range(from, to);
+
+        if (error) throw error;
+
+        return {
+            teachers: data as TeacherWithProfile[],
+            totalCount: count || 0,
+            totalPages: Math.ceil((count || 0) / limit),
         };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    };
 
-    // Get single teacher with details
-    const getTeacher = useCallback(async (id: string) => {
+    const { data, isLoading, error } = useQuery({
+        queryKey: ['teachers', filter],
+        queryFn: fetchTeachers,
+        placeholderData: (previousData) => previousData, // Keep previous data while fetching new page
+    });
+
+    // Get single teacher
+    const getTeacher = async (id: string) => {
         const { data, error } = await supabase
             .from('teacher_profiles')
             .select(`
@@ -100,14 +80,12 @@ export function useTeachers(filter?: TeachersFilter) {
             .eq('id', id)
             .single();
 
-        if (error) {
-            return { data: null, error: error.message };
-        }
+        if (error) return { data: null, error: error.message };
         return { data, error: null };
-    }, [supabase]);
+    };
 
     // Get teacher by user ID
-    const getTeacherByUserId = useCallback(async (userId: string) => {
+    const getTeacherByUserId = async (userId: string) => {
         const { data, error } = await supabase
             .from('teacher_profiles')
             .select(`
@@ -117,90 +95,17 @@ export function useTeachers(filter?: TeachersFilter) {
             .eq('user_id', userId)
             .single();
 
-        if (error) {
-            return { data: null, error: error.message };
-        }
+        if (error) return { data: null, error: error.message };
         return { data, error: null };
-    }, [supabase]);
+    };
 
-    // Update teacher profile
-    const updateTeacher = useCallback(async (teacherId: string, userId: string, updates: { profile?: Partial<Profile>, teacher?: Partial<TeacherProfile> }) => {
-        try {
-            const response = await fetch(`/api/admin/users/${teacherId}`, {
-                method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(updates),
-            });
-
-            const result = await response.json();
-
-            if (!response.ok) {
-                return { success: false, error: result.error || 'Failed to update teacher' };
-            }
-
-            await fetchTeachers();
-            return { success: true };
-        } catch (err: any) {
-            return { success: false, error: err.message || 'An unexpected error occurred' };
-        }
-    }, [fetchTeachers]);
-
-    // Get teacher earnings
-    const getTeacherEarnings = useCallback(async (teacherId: string) => {
-        const { data, error } = await supabase
-            .from('invoices')
-            .select('*')
-            .eq('teacher_id', teacherId);
-
-        if (error) {
-            return { data: null, error: error.message };
-        }
-
-        const totalEarnings = data.reduce((sum: number, inv: { status: string; total_amount: number }) =>
-            inv.status === 'paid' ? sum + inv.total_amount : sum, 0);
-        const pendingAmount = data.reduce((sum: number, inv: { status: string; total_amount: number }) =>
-            inv.status === 'pending' ? sum + inv.total_amount : sum, 0);
-
-        return {
-            data: {
-                totalEarnings,
-                pendingAmount,
-                invoiceCount: data.length,
-            },
-            error: null,
-        };
-    }, [supabase]);
-
-    // Delete teacher profile
-    const deleteTeacher = useCallback(async (id: string) => {
-        const { error } = await supabase
-            .from('teacher_profiles')
-            .delete()
-            .eq('id', id);
-
-        if (error) {
-            return { success: false, error: error.message };
-        }
-
-        setState(prev => ({
-            ...prev,
-            teachers: prev.teachers.filter(t => t.id !== id),
-        }));
-        return { success: true };
-    }, [supabase]);
-
-    // Create teacher (admin creates auth user and teacher profile via API)
-    const createTeacher = useCallback(async (input: CreateTeacherInput) => {
-        const tempPassword = Math.random().toString(36).slice(-8) + 'A1!';
-
-        try {
+    // Create teacher mutation
+    const createMutation = useMutation({
+        mutationFn: async (input: CreateTeacherInput) => {
+            const tempPassword = Math.random().toString(36).slice(-8) + 'A1!';
             const response = await fetch('/api/admin/users', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     email: input.email,
                     password: tempPassword,
@@ -215,28 +120,79 @@ export function useTeachers(filter?: TeachersFilter) {
             });
 
             const result = await response.json();
+            if (!response.ok) throw new Error(result.error || 'Failed to create teacher');
+            return result.user;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['teachers'] });
+        },
+    });
 
-            if (!response.ok) {
-                return { success: false, error: result.error || 'Failed to create teacher' };
-            }
+    // Update teacher mutation
+    const updateMutation = useMutation({
+        mutationFn: async ({ teacherId, updates }: { teacherId: string, updates: { profile?: Partial<Profile>, teacher?: Partial<TeacherProfile> } }) => {
+            const response = await fetch(`/api/admin/users/${teacherId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(updates),
+            });
 
-            await fetchTeachers();
-            return { success: true, data: result.user };
-        } catch (err: any) {
-            return { success: false, error: err.message || 'An unexpected error occurred' };
-        }
-    }, [fetchTeachers]);
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.error || 'Failed to update teacher');
+            return result;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['teachers'] });
+        },
+    });
+
+    // Delete teacher mutation
+    const deleteMutation = useMutation({
+        mutationFn: async (id: string) => {
+            const { error } = await supabase.from('teacher_profiles').delete().eq('id', id);
+            if (error) throw error;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['teachers'] });
+        },
+    });
+
+    // Get teacher earnings (kept as standalone function for now)
+    const getTeacherEarnings = async (teacherId: string) => {
+        const { data, error } = await supabase
+            .from('invoices')
+            .select('*')
+            .eq('teacher_id', teacherId);
+
+        if (error) return { data: null, error: error.message };
+
+        const totalEarnings = data.reduce((sum: number, inv: { status: string; total_amount: number }) =>
+            inv.status === 'paid' ? sum + inv.total_amount : sum, 0);
+        const pendingAmount = data.reduce((sum: number, inv: { status: string; total_amount: number }) =>
+            inv.status === 'pending' ? sum + inv.total_amount : sum, 0);
+
+        return {
+            data: {
+                totalEarnings,
+                pendingAmount,
+                invoiceCount: data.length,
+            },
+            error: null,
+        };
+    };
 
     return {
-        teachers: state.teachers,
-        isLoading: state.isLoading,
-        error: state.error,
-        refetch: fetchTeachers,
+        teachers: data?.teachers || [],
+        totalCount: data?.totalCount || 0,
+        totalPages: data?.totalPages || 0,
+        isLoading,
+        error: error ? (error as Error).message : null,
+        refetch: () => queryClient.invalidateQueries({ queryKey: ['teachers'] }),
         getTeacher,
         getTeacherByUserId,
-        updateTeacher,
+        createTeacher: createMutation.mutateAsync,
+        updateTeacher: (teacherId: string, userId: string, updates: any) => updateMutation.mutateAsync({ teacherId, updates }),
+        deleteTeacher: deleteMutation.mutateAsync,
         getTeacherEarnings,
-        deleteTeacher,
-        createTeacher,
     };
 }
