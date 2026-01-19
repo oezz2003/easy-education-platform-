@@ -30,7 +30,14 @@ export async function updateSession(request: NextRequest) {
     );
 
     // Refresh session if exists
-    const { data: { user } } = await supabase.auth.getUser();
+    let user = null;
+    try {
+        const { data } = await supabase.auth.getUser();
+        user = data.user;
+    } catch (error) {
+        // Ignore invalid refresh token errors, treating as logged out
+        console.error('Middleware auth error:', error);
+    }
 
     // Protect routes
     const protectedRoutes = ['/admin', '/teacher', '/student'];

@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useCallback } from 'react';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import type { TeacherProfile, TeacherWithProfile, Profile } from '@/types/database';
 
@@ -64,7 +65,7 @@ export function useTeachers(filter: TeachersFilter = {}) {
     });
 
     // Get single teacher
-    const getTeacher = async (id: string) => {
+    const getTeacher = useCallback(async (id: string) => {
         const { data, error } = await supabase
             .from('teacher_profiles')
             .select(`
@@ -82,10 +83,10 @@ export function useTeachers(filter: TeachersFilter = {}) {
 
         if (error) return { data: null, error: error.message };
         return { data, error: null };
-    };
+    }, [supabase]);
 
     // Get teacher by user ID
-    const getTeacherByUserId = async (userId: string) => {
+    const getTeacherByUserId = useCallback(async (userId: string) => {
         const { data, error } = await supabase
             .from('teacher_profiles')
             .select(`
@@ -97,7 +98,7 @@ export function useTeachers(filter: TeachersFilter = {}) {
 
         if (error) return { data: null, error: error.message };
         return { data, error: null };
-    };
+    }, [supabase]);
 
     // Create teacher mutation
     const createMutation = useMutation({
@@ -157,8 +158,8 @@ export function useTeachers(filter: TeachersFilter = {}) {
         },
     });
 
-    // Get teacher earnings (kept as standalone function for now)
-    const getTeacherEarnings = async (teacherId: string) => {
+    // Get teacher earnings
+    const getTeacherEarnings = useCallback(async (teacherId: string) => {
         const { data, error } = await supabase
             .from('invoices')
             .select('*')
@@ -179,7 +180,7 @@ export function useTeachers(filter: TeachersFilter = {}) {
             },
             error: null,
         };
-    };
+    }, [supabase]);
 
     return {
         teachers: data?.teachers || [],
