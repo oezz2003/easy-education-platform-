@@ -15,6 +15,7 @@ interface CoursesFilter {
     subject?: string;
     status?: string;
     search?: string;
+    teacherId?: string;
 }
 
 export function useCourses(filter?: CoursesFilter) {
@@ -30,6 +31,48 @@ export function useCourses(filter?: CoursesFilter) {
     const fetchCourses = useCallback(async () => {
         setState(prev => ({ ...prev, isLoading: true }));
 
+        // If teacherId is provided, we need to get courses linked via batches
+        if (filter?.teacherId) {
+            // First get batch course_ids for this teacher
+            const { data: batchData, error: batchError } = await supabase
+                .from('batches')
+                .select('course_id')
+                .eq('teacher_id', filter.teacherId);
+
+            if (batchError) {
+                setState({ courses: [], isLoading: false, error: batchError.message });
+                return;
+            }
+
+            const courseIds = Array.from(new Set((batchData || []).map((b: { course_id: string }) => b.course_id)));
+
+            if (courseIds.length === 0) {
+                setState({ courses: [], isLoading: false, error: null });
+                return;
+            }
+
+            let query = supabase
+                .from('courses')
+                .select('*')
+                .in('id', courseIds)
+                .order('created_at', { ascending: false });
+
+            // Apply other filters
+            if (filter?.level) query = query.eq('level', filter.level);
+            if (filter?.subject) query = query.eq('subject', filter.subject);
+            if (filter?.status) query = query.eq('status', filter.status);
+            if (filter?.search) query = query.ilike('name', `%${filter.search}%`);
+
+            const { data, error } = await query;
+            if (error) {
+                setState({ courses: [], isLoading: false, error: error.message });
+            } else {
+                setState({ courses: data || [], isLoading: false, error: null });
+            }
+            return;
+        }
+
+        // Default: fetch all courses (for admin)
         let query = supabase
             .from('courses')
             .select('*')
@@ -56,7 +99,7 @@ export function useCourses(filter?: CoursesFilter) {
         } else {
             setState({ courses: data || [], isLoading: false, error: null });
         }
-    }, [supabase, filter?.level, filter?.subject, filter?.status, filter?.search]);
+    }, [supabase, filter?.level, filter?.subject, filter?.status, filter?.search, filter?.teacherId]);
 
     useEffect(() => {
         fetchCourses();

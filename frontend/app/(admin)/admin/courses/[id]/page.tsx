@@ -32,6 +32,7 @@ import {
     Code,
     Check
 } from 'lucide-react';
+import EnrollStudentModal from '@/app/components/admin/EnrollStudentModal';
 
 // Lesson content types
 const lessonTypes = [
@@ -118,6 +119,7 @@ export default function CourseDetailsPage() {
     const [isChapterModalOpen, setIsChapterModalOpen] = useState(false);
     const [isLessonModalOpen, setIsLessonModalOpen] = useState(false);
     const [selectedChapterId, setSelectedChapterId] = useState<string | null>(null);
+    const [isEnrollModalOpen, setIsEnrollModalOpen] = useState(false);
 
     // Form states
     const [chapterTitle, setChapterTitle] = useState('');
@@ -449,7 +451,18 @@ export default function CourseDetailsPage() {
                     <motion.div key="students" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="bg-white rounded-2xl shadow-lg p-6">
                         <div className="flex items-center justify-between mb-6">
                             <h2 className="text-xl font-bold text-gray-900">Enrolled Students</h2>
-                            <span className="text-sm text-gray-500">{enrolledStudents.length} students</span>
+                            <div className="flex items-center gap-3">
+                                <span className="text-sm text-gray-500">{enrolledStudents.length} students</span>
+                                <motion.button
+                                    whileHover={{ scale: 1.02 }}
+                                    whileTap={{ scale: 0.98 }}
+                                    onClick={() => setIsEnrollModalOpen(true)}
+                                    className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-medium"
+                                >
+                                    <Plus className="w-4 h-4" />
+                                    Add Student
+                                </motion.button>
+                            </div>
                         </div>
                         <div className="space-y-4">
                             {enrolledStudents.map((student) => (
@@ -576,8 +589,8 @@ export default function CourseDetailsPage() {
                                                     whileTap={{ scale: 0.98 }}
                                                     onClick={() => setLessonData({ ...lessonData, type: type.id })}
                                                     className={`p-3 rounded-xl border-2 flex flex-col items-center gap-1 transition-all ${lessonData.type === type.id
-                                                            ? 'border-purple-500 bg-purple-50'
-                                                            : 'border-gray-200 hover:border-gray-300'
+                                                        ? 'border-purple-500 bg-purple-50'
+                                                        : 'border-gray-200 hover:border-gray-300'
                                                         }`}
                                                 >
                                                     <type.icon className={`w-5 h-5 ${lessonData.type === type.id ? 'text-purple-500' : 'text-gray-500'}`} />
@@ -684,6 +697,18 @@ export default function CourseDetailsPage() {
                     </>
                 )}
             </AnimatePresence>
+
+            {/* Enroll Student Modal */}
+            <EnrollStudentModal
+                isOpen={isEnrollModalOpen}
+                onClose={() => setIsEnrollModalOpen(false)}
+                batchId={course.id}
+                batchName={course.title}
+                onSuccess={() => {
+                    // Refresh enrolled students (would need real data integration)
+                    // For now, just close modal
+                }}
+            />
         </div>
     );
 }

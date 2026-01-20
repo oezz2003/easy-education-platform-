@@ -108,6 +108,11 @@ export async function POST(request: Request) {
 
             if (sessionsError) throw sessionsError;
 
+            // Note: Course revenue calculation is skipped for now.
+            // Courses are linked to teachers via batches, not directly.
+            // This would require a more complex join through batch_enrollments.
+            const courses: any[] = [];
+
             // Get teacher hourly rate
             const { data: teacher } = await supabaseAdmin
                 .from('teacher_profiles')
@@ -119,6 +124,10 @@ export async function POST(request: Request) {
             const sessionCount = sessions?.length || 0;
             const sessionEarnings = sessionCount * hourlyRate;
 
+            // Simple course revenue calculation (e.g., 10% of course price for each active course - placeholder)
+            // This should ideally be based on enrollments/transactions
+            const courseRevenue = courses?.reduce((acc, course) => acc + (course.price * 0.1), 0) || 0;
+
             // Create/Update salary record
             const { data: salary, error: salaryError } = await supabaseAdmin
                 .from('teacher_salaries')
@@ -128,7 +137,7 @@ export async function POST(request: Request) {
                     year,
                     sessions_count: sessionCount,
                     session_earnings: sessionEarnings,
-                    total_amount: sessionEarnings, // Base amount, bonuses/deductions added later
+                    total_amount: sessionEarnings + courseRevenue,
                     status: 'pending',
                 }, {
                     onConflict: 'teacher_id,month,year'
@@ -139,25 +148,83 @@ export async function POST(request: Request) {
             if (salaryError) throw salaryError;
 
             // Create salary items
-            if (sessions && sessions.length > 0) {
-                // First delete existing session items to avoid duplicates if regenerating
-                await supabaseAdmin
-                    .from('salary_items')
-                    .delete()
-                    .eq('salary_id', salary.id)
-                    .eq('type', 'session');
+            // First delete existing items to avoid duplicates if regenerating
+            await supabaseAdmin
+                .from('salary_items')
+                .delete()
+                .eq('salary_id', salary.id);
 
-                const items = sessions.map((session: { id: string }) => ({
+            const items = [];
+
+            if (sessions && sessions.length > 0) {
+                items.push(...sessions.map((session: { id: string }) => ({
                     salary_id: salary.id,
                     description: 'Session payment',
                     type: 'session',
                     amount: hourlyRate,
                     session_id: session.id,
+                })));
+            }
+
+            if (courses && courses.length > 0) {
+                items.push({
+                    salary_id: salary.id,
+                    description: 'Course Revenue Share',
+                    type: 'course_revenue', // Ensure this type exists in DB enum or use 'bonus'
+                    amount: courseRevenue,
+                });
+            }
+
+            if (items.length > 0) {
+                const { error: itemsError } = await supabaseAdmin
+                    .from('salary_items')
+                    .insert(items);
+
+                if (itemsError) throw itemsError;
+            }
+
+            return NextResponse.json({ data: salary });
+        }
+
+        if (action === 'create_salary') {
+            const { teacher_id, month, year, session_earnings, sessions_count, total_amount, items, notes } = data;
+
+            // Create/Update salary record
+            const { data: salary, error: salaryError } = await supabaseAdmin
+                .from('teacher_salaries')
+                .upsert({
+                    teacher_id,
+                    month,
+                    year,
+                    sessions_count,
+                    session_earnings,
+                    total_amount,
+                    notes,
+                    status: 'pending',
+                }, {
+                    onConflict: 'teacher_id,month,year'
+                })
+                .select()
+                .single();
+
+            if (salaryError) throw salaryError;
+
+            // Create salary items
+            if (items && items.length > 0) {
+                // Delete existing items first
+                await supabaseAdmin
+                    .from('salary_items')
+                    .delete()
+                    .eq('salary_id', salary.id);
+
+                const salaryItems = items.map((item: any) => ({
+                    salary_id: salary.id,
+                    ...item
                 }));
 
                 const { error: itemsError } = await supabaseAdmin
                     .from('salary_items')
-                    .insert(items);
+                    .insert(salaryItems);
 
                 if (itemsError) throw itemsError;
             }

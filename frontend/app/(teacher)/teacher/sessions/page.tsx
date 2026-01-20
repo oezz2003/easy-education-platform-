@@ -34,9 +34,18 @@ export default function LiveSessionsPage() {
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 5;
 
-    // Fetch real data from hook
+    // Get current teacher ID
+    const { useAuth } = require('@/hooks/useAuth');
+    const { useTeachers } = require('@/hooks/useTeachers');
+    const { profile } = useAuth();
+    const { teachers } = useTeachers();
+    const currentTeacher = teachers.find((t: any) => t.profile?.id === profile?.id);
+    const teacherId = currentTeacher?.id;
+
+    // Fetch real data from hook with teacherId filter
     const { sessions: rawSessions, isLoading, error, refetch } = useSessions({
         status: filter !== 'all' ? filter : undefined,
+        teacherId,
     });
 
     // Transform sessions data (hook returns joined data but typed as LiveSession)

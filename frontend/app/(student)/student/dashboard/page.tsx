@@ -18,20 +18,43 @@ import {
 import { useAuth } from '@/hooks/useAuth';
 import { useStudents } from '@/hooks/useStudents';
 import { useSessions } from '@/hooks/useSessions';
+import { useState, useEffect } from 'react';
 
 export default function StudentDashboard() {
     const { profile, isLoading: authLoading } = useAuth();
-    const { students } = useStudents();
+    const { students, getStudent } = useStudents();
     const { sessions } = useSessions();
+    const [enrolledBatchIds, setEnrolledBatchIds] = useState<string[]>([]);
 
     // Get current student's data
     const currentStudent = students.find(s => s.profile?.id === profile?.id);
     const xpPoints = currentStudent?.xp_points || 0;
     const streak = currentStudent?.streak_days || 0;
 
-    // Get today's sessions
+    // Fetch enrolled batches
+    useEffect(() => {
+        const fetchEnrollments = async () => {
+            if (currentStudent?.id) {
+                const { data } = await getStudent(currentStudent.id);
+                if (data?.enrollments) {
+                    const activeBatches = data.enrollments
+                        .filter((e: any) => e.status === 'active')
+                        .map((e: any) => e.batch_id);
+                    setEnrolledBatchIds(activeBatches);
+                }
+            }
+        };
+        fetchEnrollments();
+    }, [currentStudent, getStudent]);
+
+    // Get today's sessions for enrolled batches
     const today = new Date().toISOString().split('T')[0];
-    const todaySessions = sessions.filter(s => s.session_date === today);
+    const todaySessions = sessions.filter(s => {
+        const isToday = s.session_date === today;
+        const isEnrolled = enrolledBatchIds.includes((s as any).batch_id);
+        const isInvited = (s as any).invited_students?.includes(currentStudent?.id);
+        return isToday && (isEnrolled || isInvited);
+    });
 
     // Stats data - mix of real and placeholder
     const stats = [

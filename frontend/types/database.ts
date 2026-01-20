@@ -587,3 +587,36 @@ export interface CreateNotificationInput {
     action_url?: string;
     priority?: NotificationPriority;
 }
+
+export interface Database {
+    public: {
+        Tables: {
+            profiles: { Row: Profile; Insert: Profile; Update: Partial<Profile> };
+            teacher_profiles: { Row: TeacherProfile; Insert: TeacherProfile; Update: Partial<TeacherProfile> };
+            student_profiles: { Row: StudentProfile; Insert: StudentProfile; Update: Partial<StudentProfile> };
+            courses: { Row: Course; Insert: Course; Update: Partial<Course> };
+            batches: { Row: Batch; Insert: Batch; Update: Partial<Batch> };
+            batch_enrollments: { Row: BatchEnrollment; Insert: BatchEnrollment; Update: Partial<BatchEnrollment> };
+            teacher_availability: { Row: TeacherAvailability; Insert: TeacherAvailability; Update: Partial<TeacherAvailability> };
+            blocked_dates: { Row: BlockedDate; Insert: BlockedDate; Update: Partial<BlockedDate> };
+            session_types: { Row: SessionType; Insert: SessionType; Update: Partial<SessionType> };
+            live_sessions: { Row: LiveSession; Insert: LiveSession; Update: Partial<LiveSession> };
+            attendance: { Row: Attendance; Insert: Attendance; Update: Partial<Attendance> };
+            session_bookings: { Row: SessionBooking; Insert: SessionBooking; Update: Partial<SessionBooking> };
+            invoices: { Row: Invoice; Insert: Invoice; Update: Partial<Invoice> };
+            invoice_items: { Row: InvoiceItem; Insert: InvoiceItem; Update: Partial<InvoiceItem> };
+            transactions: { Row: Transaction; Insert: Transaction; Update: Partial<Transaction> };
+            teacher_salaries: { Row: TeacherSalary; Insert: TeacherSalary; Update: Partial<TeacherSalary> };
+            salary_items: { Row: SalaryItem; Insert: SalaryItem; Update: Partial<SalaryItem> };
+            expense_categories: { Row: ExpenseCategory; Insert: ExpenseCategory; Update: Partial<ExpenseCategory> };
+            expenses: { Row: Expense; Insert: Expense; Update: Partial<Expense> };
+            achievements: { Row: Achievement; Insert: Achievement; Update: Partial<Achievement> };
+            student_achievements: { Row: StudentAchievement; Insert: StudentAchievement; Update: Partial<StudentAchievement> };
+            teacher_reviews: { Row: TeacherReview; Insert: TeacherReview; Update: Partial<TeacherReview> };
+            notifications: { Row: Notification; Insert: Notification; Update: Partial<Notification> };
+            notification_preferences: { Row: NotificationPreference; Insert: NotificationPreference; Update: Partial<NotificationPreference> };
+            announcements: { Row: Announcement; Insert: Announcement; Update: Partial<Announcement> };
+            activity_logs: { Row: ActivityLog; Insert: ActivityLog; Update: Partial<ActivityLog> };
+        };
+    };
+}

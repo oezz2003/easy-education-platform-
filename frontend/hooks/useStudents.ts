@@ -15,6 +15,7 @@ interface StudentsFilter {
     search?: string;
     batchId?: string;
     status?: 'active' | 'inactive';
+    teacherId?: string;
 }
 
 interface CreateStudentInput {
@@ -38,6 +39,68 @@ export function useStudents(filter?: StudentsFilter) {
     const fetchStudents = useCallback(async () => {
         setState(prev => ({ ...prev, isLoading: true }));
 
+        // If teacherId is provided, get students enrolled in teacher's batches
+        if (filter?.teacherId) {
+            // First get batch IDs for this teacher
+            const { data: batchData, error: batchError } = await supabase
+                .from('batches')
+                .select('id')
+                .eq('teacher_id', filter.teacherId);
+
+            if (batchError) {
+                setState({ students: [], isLoading: false, error: batchError.message });
+                return;
+            }
+
+            const batchIds = (batchData || []).map((b: { id: string }) => b.id);
+
+            if (batchIds.length === 0) {
+                setState({ students: [], isLoading: false, error: null });
+                return;
+            }
+
+            // Get enrollments for these batches
+            const { data: enrollmentData, error: enrollmentError } = await supabase
+                .from('batch_enrollments')
+                .select('student_id')
+                .in('batch_id', batchIds)
+                .eq('status', 'active');
+
+            if (enrollmentError) {
+                setState({ students: [], isLoading: false, error: enrollmentError.message });
+                return;
+            }
+
+            const studentIds = Array.from(new Set((enrollmentData || []).map((e: { student_id: string }) => e.student_id)));
+
+            if (studentIds.length === 0) {
+                setState({ students: [], isLoading: false, error: null });
+                return;
+            }
+
+            let query = supabase
+                .from('student_profiles')
+                .select(`
+                    *,
+                    profile:profiles!inner(*)
+                `)
+                .in('id', studentIds)
+                .eq('profile.role', 'student')
+                .order('created_at', { ascending: false });
+
+            if (filter?.level) query = query.eq('level', filter.level);
+            if (filter?.search) query = query.or(`profile.full_name.ilike.%${filter.search}%,profile.email.ilike.%${filter.search}%`);
+
+            const { data, error } = await query;
+            if (error) {
+                setState({ students: [], isLoading: false, error: error.message });
+            } else {
+                setState({ students: data || [], isLoading: false, error: null });
+            }
+            return;
+        }
+
+        // Default: fetch all students (for admin)
         let query = supabase
             .from('student_profiles')
             .select(`
@@ -62,7 +125,7 @@ export function useStudents(filter?: StudentsFilter) {
         } else {
             setState({ students: data || [], isLoading: false, error: null });
         }
-    }, [supabase, filter?.level, filter?.search, filter?.batchId, filter?.status]);
+    }, [supabase, filter?.level, filter?.search, filter?.batchId, filter?.status, filter?.teacherId]);
 
     useEffect(() => {
         fetchStudents();
@@ -241,6 +304,22 @@ export function useStudents(filter?: StudentsFilter) {
         return { success: true, data: authData.user };
     }, [supabase, fetchStudents]);
 
+    // Get student credentials (admin only)
+    const getStudentCredentials = useCallback(async (userId: string) => {
+        try {
+            const response = await fetch(`/api/admin/users/${userId}/credentials`);
+            const result = await response.json();
+
+            if (!response.ok) {
+                return { data: null, error: result.error };
+            }
+
+            return { data: result, error: null };
+        } catch (error: any) {
+            return { data: null, error: error.message };
+        }
+    }, []);
+
     return {
         students: state.students,
         isLoading: state.isLoading,
@@ -253,5 +332,6 @@ export function useStudents(filter?: StudentsFilter) {
         addXP,
         deleteStudent,
         createStudent,
+        getStudentCredentials,
     };
 }

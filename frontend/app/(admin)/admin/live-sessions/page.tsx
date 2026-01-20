@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import {
@@ -33,6 +33,7 @@ import { useTeachers } from '@/hooks/useTeachers';
 import { useCourses } from '@/hooks/useCourses';
 import { useBatches } from '@/hooks/useBatches';
 import { useStudents } from '@/hooks/useStudents';
+import { useBookings } from '@/hooks/useBookings';
 
 // Types
 interface Student {
@@ -86,6 +87,22 @@ interface Session {
     recurringDays: number[];
 }
 
+interface Booking {
+    id: string;
+    studentName: string;
+    studentPhone: string;
+    studentEmail: string | null;
+    level: string | null;
+    date: Date;
+    time: string;
+    status: 'pending' | 'confirmed' | 'completed' | 'cancelled';
+    teacherId: string;
+    teacherName: string;
+    teacherAvatar: string;
+    courseId: string | null;
+    courseName: string | null;
+}
+
 // Mock data
 const generateMeetLink = () => `https://meet.google.com/${Math.random().toString(36).substring(2, 5)}-${Math.random().toString(36).substring(2, 6)}-${Math.random().toString(36).substring(2, 5)}`;
 
@@ -110,6 +127,7 @@ export default function LiveSessionsPage() {
     const [filterCourse, setFilterCourse] = useState<string>('all');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedSession, setSelectedSession] = useState<Session | null>(null);
+    const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
     const [isCreating, setIsCreating] = useState(false);
     const [draggedSession, setDraggedSession] = useState<Session | null>(null);
     const [copiedLink, setCopiedLink] = useState(false);
@@ -120,8 +138,9 @@ export default function LiveSessionsPage() {
     const { sessions: rawSessions, isLoading: sessionsLoading, error: sessionsError, createSession: createSessionHook, deleteSession: deleteSessionHook, updateSession, refetch: refetchSessions } = useSessions();
     const { teachers: rawTeachers } = useTeachers();
     const { courses: rawCourses } = useCourses();
-    const { batches: rawBatches } = useBatches();
+    const { batches: rawBatches, getBatch } = useBatches();
     const { students: rawStudents } = useStudents();
+    const { bookings: rawBookings, fetchBookings, updateBookingStatus } = useBookings();
 
     // Transform teachers
     const teachers: Teacher[] = rawTeachers.map(t => ({
@@ -185,7 +204,32 @@ export default function LiveSessionsPage() {
         };
     });
 
-    // New session form
+    // Fetch bookings on mount
+    useEffect(() => {
+        fetchBookings();
+    }, [fetchBookings]);
+
+    // Transform bookings for calendar display
+    const bookings: Booking[] = rawBookings.map(b => {
+        const teacher = teachers.find(t => t.id === (b as any).teacher_id);
+        const course = courses.find(c => c.id === (b as any).course_id);
+        return {
+            id: b.id,
+            studentName: b.student_name,
+            studentPhone: b.student_phone,
+            studentEmail: b.student_email,
+            level: b.level,
+            date: new Date(b.booking_date),
+            time: b.booking_time,
+            status: b.status,
+            teacherId: (b as any).teacher_id || '',
+            teacherName: teacher?.name || 'Unknown',
+            teacherAvatar: teacher?.avatar || '',
+            courseId: (b as any).course_id,
+            courseName: course?.name || null,
+        };
+    });
+
     const [newSession, setNewSession] = useState({
         title: '',
         description: '',
@@ -198,7 +242,30 @@ export default function LiveSessionsPage() {
         invitedStudents: [] as string[],
         recurring: false,
         recurringDays: [] as number[],
+        meetLink: '',
     });
+    const [isLoadingStudents, setIsLoadingStudents] = useState(false);
+
+    // Helper to generate recurring dates (4 weeks)
+    const generateRecurringDates = (startDate: string, days: number[]) => {
+        const dates: string[] = [];
+        const start = new Date(startDate);
+        const targetDays = days.length > 0 ? days : [start.getDay()];
+
+        // Generate for 4 weeks
+        for (let week = 0; week < 4; week++) {
+            targetDays.forEach(dayOfWeek => {
+                const date = new Date(start);
+                date.setDate(start.getDate() + (week * 7) + (dayOfWeek - start.getDay()));
+                // Only add if it's same as or after start date
+                if (date >= start) {
+                    dates.push(date.toISOString().split('T')[0]);
+                }
+            });
+        }
+        // Sort and remove duplicates
+        return [...new Set(dates)].sort();
+    };
 
     const weekDays = getWeekDays(currentDate);
 
@@ -241,12 +308,27 @@ export default function LiveSessionsPage() {
         });
     };
 
+    const getBookingsForSlot = (day: Date, time: string) => {
+        return bookings.filter(b => {
+            if (!isSameDay(b.date, day)) return false;
+            const bookingStart = parseInt(b.time.split(':')[0]);
+            const slotStart = parseInt(time.split(':')[0]);
+            return bookingStart === slotStart;
+        });
+    };
+
+    const openBookingModal = (booking: Booking) => {
+        setSelectedBooking(booking);
+        setSelectedSession(null);
+        setIsCreating(false);
+        setIsModalOpen(true);
+    };
+
     const handleDragStart = (session: Session) => setDraggedSession(session);
     const handleDragOver = (e: React.DragEvent) => e.preventDefault();
 
     const handleDrop = async (day: Date, time: string) => {
         if (!draggedSession) return;
-        // Update session via hook
         await updateSession(draggedSession.id, {
             session_date: day.toISOString().split('T')[0],
             start_time: time,
@@ -258,12 +340,37 @@ export default function LiveSessionsPage() {
 
     const openSessionModal = (session: Session) => {
         setSelectedSession(session);
+        setSelectedBooking(null);
         setIsCreating(false);
         setIsModalOpen(true);
     };
 
+    const handleEditSession = async () => {
+        if (!selectedSession) return;
+
+        // Populate form with session data
+        setNewSession({
+            title: selectedSession.title,
+            description: selectedSession.description,
+            teacherId: selectedSession.teacherId,
+            courseId: selectedSession.courseId,
+            date: selectedSession.date.toISOString().split('T')[0],
+            startTime: selectedSession.startTime,
+            duration: selectedSession.duration,
+            maxAttendees: selectedSession.maxAttendees,
+            invitedStudents: selectedSession.invitedStudents,
+            recurring: false,
+            recurringDays: [],
+            meetLink: selectedSession.meetLink,
+        });
+
+        setIsCreating(true);
+        setModalStep(1);
+    };
+
     const openCreateModal = (day?: Date, time?: string) => {
         setSelectedSession(null);
+        setSelectedBooking(null);
         setIsCreating(true);
         setModalStep(1);
         setNewSession({
@@ -278,6 +385,7 @@ export default function LiveSessionsPage() {
             invitedStudents: [],
             recurring: false,
             recurringDays: [],
+            meetLink: '',
         });
         setIsModalOpen(true);
     };
@@ -323,21 +431,59 @@ export default function LiveSessionsPage() {
 
         const endTime = `${parseInt(newSession.startTime.split(':')[0]) + Math.ceil(newSession.duration / 60)}:00`;
 
-        await createSessionHook({
-            batch_id: course.batchId,
-            teacher_id: teacher.id,
-            title: newSession.title,
-            description: newSession.description,
-            session_date: newSession.date,
-            start_time: newSession.startTime,
-            end_time: endTime,
-            meet_link: generateMeetLink(),
-            status: 'scheduled',
-            invited_students: newSession.invitedStudents,
-        } as any);
+        // Handle recurrence
+        const dates = newSession.recurring
+            ? generateRecurringDates(newSession.date, newSession.recurringDays)
+            : [newSession.date];
+
+        // Create sessions sequentially
+        for (const date of dates) {
+            // If editing (selectedSession exists) and not recurring, update instead of create
+            if (selectedSession && !newSession.recurring && dates.length === 1) {
+                await updateSession(selectedSession.id, {
+                    title: newSession.title,
+                    description: newSession.description,
+                    session_date: date,
+                    start_time: newSession.startTime,
+                    end_time: endTime,
+                    meet_link: newSession.meetLink || selectedSession.meetLink,
+                    invited_students: newSession.invitedStudents,
+                } as any);
+            } else {
+                await createSessionHook({
+                    batch_id: course.batchId,
+                    teacher_id: teacher.id,
+                    title: newSession.title,
+                    description: newSession.description,
+                    session_date: date,
+                    start_time: newSession.startTime,
+                    end_time: endTime,
+                    meet_link: newSession.meetLink || generateMeetLink(),
+                    status: 'scheduled',
+                    invited_students: newSession.invitedStudents,
+                } as any);
+            }
+        }
 
         refetchSessions();
         setIsModalOpen(false);
+        setSelectedSession(null);
+    };
+
+    const handleCourseSelect = async (courseId: string) => {
+        setNewSession(prev => ({ ...prev, courseId, invitedStudents: [] }));
+        const course = courses.find(c => c.id === courseId);
+        if (course?.batchId) {
+            setIsLoadingStudents(true);
+            const { data } = await getBatch(course.batchId);
+            if (data?.enrollments) {
+                const studentIds = data.enrollments
+                    .filter((e: any) => e.status === 'active')
+                    .map((e: any) => e.student_id);
+                setNewSession(prev => ({ ...prev, invitedStudents: studentIds }));
+            }
+            setIsLoadingStudents(false);
+        }
     };
 
     const handleDeleteSession = async (id: string) => {
@@ -447,10 +593,14 @@ export default function LiveSessionsPage() {
                                     (filterTeacher === 'all' || s.teacherId === filterTeacher) &&
                                     (filterCourse === 'all' || s.courseId === filterCourse)
                                 );
+                                const slotBookings = getBookingsForSlot(day, time).filter(b =>
+                                    filterTeacher === 'all' || b.teacherId === filterTeacher
+                                );
                                 return (
                                     <div key={dayIdx} className="p-1 border-l border-gray-50 min-h-[70px] hover:bg-gray-50 cursor-pointer"
                                         onDragOver={handleDragOver} onDrop={() => handleDrop(day, time)}
-                                        onClick={() => slotSessions.length === 0 && openCreateModal(day, time)}>
+                                        onClick={() => slotSessions.length === 0 && slotBookings.length === 0 && openCreateModal(day, time)}>
+                                        {/* Sessions (Red/Orange) */}
                                         {slotSessions.map((session) => (
                                             <motion.div key={session.id} draggable onDragStart={() => handleDragStart(session)}
                                                 onClick={(e) => { e.stopPropagation(); openSessionModal(session); }}
@@ -463,6 +613,20 @@ export default function LiveSessionsPage() {
                                                 </div>
                                                 <p className="opacity-80 truncate text-[10px]">{session.courseName} • {session.batchName}</p>
                                                 <p className="opacity-70 text-[10px]">{session.invitedStudents.length} students</p>
+                                            </motion.div>
+                                        ))}
+                                        {/* Bookings (Blue) - Free Trial Sessions */}
+                                        {slotBookings.map((booking) => (
+                                            <motion.div key={booking.id}
+                                                onClick={(e) => { e.stopPropagation(); openBookingModal(booking); }}
+                                                whileHover={{ scale: 1.02 }}
+                                                className="rounded-lg p-2 bg-blue-500 text-white text-xs cursor-pointer mb-1">
+                                                <div className="flex items-center gap-1 mb-1">
+                                                    <span className="w-2 h-2 bg-white rounded-full" />
+                                                    <span className="font-medium truncate">Trial: {booking.studentName}</span>
+                                                </div>
+                                                <p className="opacity-80 truncate text-[10px]">{booking.teacherName}</p>
+                                                <p className="opacity-70 text-[10px]">{booking.level || 'Level N/A'} • {booking.status}</p>
                                             </motion.div>
                                         ))}
                                     </div>
@@ -535,7 +699,7 @@ export default function LiveSessionsPage() {
                                                             <label className="block text-sm font-medium text-gray-700 mb-2">Select Course & Batch *</label>
                                                             <div className="space-y-2">
                                                                 {teacherCourses.map((course) => (
-                                                                    <button key={course.id} onClick={() => setNewSession({ ...newSession, courseId: course.id, invitedStudents: [] })}
+                                                                    <button key={course.id} onClick={() => handleCourseSelect(course.id)}
                                                                         className={`w-full p-3 rounded-xl border-2 text-left transition-all ${newSession.courseId === course.id ? 'border-red-500 bg-red-50' : 'border-gray-200 hover:border-gray-300'}`}>
                                                                         <div className="flex items-center justify-between">
                                                                             <div>
@@ -606,13 +770,31 @@ export default function LiveSessionsPage() {
                                                             ))}
                                                         </div>
                                                     )}
+                                                    {/* Meeting Link Input */}
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700 mb-2">Meeting Link (Optional)</label>
+                                                        <div className="relative">
+                                                            <LinkIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                                                            <input
+                                                                type="url"
+                                                                value={newSession.meetLink}
+                                                                onChange={(e) => setNewSession({ ...newSession, meetLink: e.target.value })}
+                                                                placeholder="https://meet.google.com/xxx-xxxx-xxx"
+                                                                className="w-full pl-12 pr-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-red-400"
+                                                            />
+                                                        </div>
+                                                        <p className="text-xs text-gray-500 mt-1">Google Meet, Zoom, or other meeting link</p>
+                                                    </div>
                                                 </div>
                                             )}
 
                                             {modalStep === 3 && (
                                                 <div className="space-y-4">
                                                     <div className="flex items-center justify-between">
-                                                        <p className="text-sm text-gray-600">{newSession.invitedStudents.length} students selected</p>
+                                                        <div className="flex items-center gap-2">
+                                                            <p className="text-sm text-gray-600">{newSession.invitedStudents.length} students selected</p>
+                                                            {isLoadingStudents && <Loader2 className="w-4 h-4 animate-spin text-red-500" />}
+                                                        </div>
                                                         <button onClick={selectAllStudents} className="text-sm text-red-500 hover:text-red-600 font-medium">Select All</button>
                                                     </div>
                                                     <div className="relative">
@@ -645,12 +827,12 @@ export default function LiveSessionsPage() {
                                             ) : (
                                                 <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={handleCreateSession}
                                                     className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-red-500 to-orange-500 text-white rounded-xl font-medium shadow-lg">
-                                                    <Video className="w-5 h-5" /> Create Session
+                                                    <Video className="w-5 h-5" /> {selectedSession ? 'Update Session' : 'Create Session'}
                                                 </motion.button>
                                             )}
                                         </div>
                                     </>
-                                ) : selectedSession && (
+                                ) : selectedSession ? (
                                     /* Session Details View */
                                     <>
                                         <div className="relative">
@@ -702,6 +884,9 @@ export default function LiveSessionsPage() {
                                                 <motion.button whileTap={{ scale: 0.98 }} onClick={() => handleDeleteSession(selectedSession.id)} className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 border border-red-200 text-red-500 hover:bg-red-50 rounded-xl font-medium">
                                                     <Trash2 className="w-4 h-4" /> Delete
                                                 </motion.button>
+                                                <motion.button whileTap={{ scale: 0.98 }} onClick={handleEditSession} className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 border border-blue-200 text-blue-500 hover:bg-blue-50 rounded-xl font-medium">
+                                                    <List className="w-4 h-4" /> Edit
+                                                </motion.button>
                                                 <Link href={`/admin/live-sessions/${selectedSession.id}`} className="flex-1">
                                                     <motion.button whileTap={{ scale: 0.98 }} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-medium">
                                                         <Users className="w-4 h-4" /> Attendance
@@ -714,7 +899,86 @@ export default function LiveSessionsPage() {
                                             </div>
                                         </div>
                                     </>
-                                )}
+                                ) : selectedBooking ? (
+                                    /* Booking Details View */
+                                    <>
+                                        <div className="relative">
+                                            <div className="h-24 rounded-t-3xl bg-gradient-to-r from-blue-500 to-cyan-500" />
+                                            <button onClick={() => setIsModalOpen(false)} className="absolute top-4 right-4 p-2 rounded-xl bg-white/20 hover:bg-white/30 text-white"><X className="w-5 h-5" /></button>
+                                            <div className="absolute -bottom-6 left-6">
+                                                <div className="w-16 h-16 rounded-xl bg-blue-600 border-4 border-white shadow-lg flex items-center justify-center">
+                                                    <GraduationCap className="w-8 h-8 text-white" />
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="pt-10 px-6 pb-6">
+                                            <div className="flex items-start justify-between mb-4">
+                                                <div>
+                                                    <h2 className="text-xl font-bold text-gray-900">Free Trial Session</h2>
+                                                    <p className="text-gray-500">{selectedBooking.studentName}</p>
+                                                    <p className="text-sm text-gray-400">{selectedBooking.teacherName}</p>
+                                                </div>
+                                                <span className={`px-3 py-1 rounded-full text-sm font-medium ${selectedBooking.status === 'confirmed' ? 'bg-green-100 text-green-600' :
+                                                    selectedBooking.status === 'pending' ? 'bg-yellow-100 text-yellow-600' :
+                                                        selectedBooking.status === 'completed' ? 'bg-blue-100 text-blue-600' :
+                                                            'bg-red-100 text-red-600'
+                                                    }`}>
+                                                    {selectedBooking.status.charAt(0).toUpperCase() + selectedBooking.status.slice(1)}
+                                                </span>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-4 mb-4">
+                                                <div className="p-3 bg-gray-50 rounded-xl">
+                                                    <p className="text-xs text-gray-500 mb-1">Date & Time</p>
+                                                    <p className="font-medium text-gray-900">{selectedBooking.date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</p>
+                                                    <p className="text-sm text-gray-600">{selectedBooking.time}</p>
+                                                </div>
+                                                <div className="p-3 bg-gray-50 rounded-xl">
+                                                    <p className="text-xs text-gray-500 mb-1">Student Level</p>
+                                                    <p className="font-medium text-gray-900">{selectedBooking.level || 'Not specified'}</p>
+                                                </div>
+                                            </div>
+                                            <div className="p-4 bg-gray-50 rounded-xl mb-4 space-y-2">
+                                                <div className="flex items-center gap-2">
+                                                    <Mail className="w-4 h-4 text-gray-400" />
+                                                    <span className="text-sm text-gray-700">{selectedBooking.studentEmail || 'No email'}</span>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <Clock className="w-4 h-4 text-gray-400" />
+                                                    <span className="text-sm text-gray-700">{selectedBooking.studentPhone}</span>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-3">
+                                                {selectedBooking.status === 'pending' && (
+                                                    <>
+                                                        <motion.button whileTap={{ scale: 0.98 }} onClick={async () => {
+                                                            await updateBookingStatus(selectedBooking.id, 'cancelled');
+                                                            fetchBookings();
+                                                            setIsModalOpen(false);
+                                                        }} className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 border border-red-200 text-red-500 hover:bg-red-50 rounded-xl font-medium">
+                                                            <X className="w-4 h-4" /> Cancel
+                                                        </motion.button>
+                                                        <motion.button whileTap={{ scale: 0.98 }} onClick={async () => {
+                                                            await updateBookingStatus(selectedBooking.id, 'confirmed');
+                                                            fetchBookings();
+                                                            setIsModalOpen(false);
+                                                        }} className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-xl font-medium shadow-lg">
+                                                            <Check className="w-4 h-4" /> Confirm
+                                                        </motion.button>
+                                                    </>
+                                                )}
+                                                {selectedBooking.status === 'confirmed' && (
+                                                    <motion.button whileTap={{ scale: 0.98 }} onClick={async () => {
+                                                        await updateBookingStatus(selectedBooking.id, 'completed');
+                                                        fetchBookings();
+                                                        setIsModalOpen(false);
+                                                    }} className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-xl font-medium shadow-lg">
+                                                        <Check className="w-4 h-4" /> Mark Completed
+                                                    </motion.button>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </>
+                                ) : null}
                             </div>
                         </motion.div>
                     </>

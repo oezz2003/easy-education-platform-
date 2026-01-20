@@ -38,11 +38,20 @@ export default function MyStudentsPage() {
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 6;
 
-    // Fetch real data
+    // Get current teacher ID
+    const { useAuth } = require('@/hooks/useAuth');
+    const { useTeachers } = require('@/hooks/useTeachers');
+    const { profile } = useAuth();
+    const { teachers } = useTeachers();
+    const currentTeacher = teachers.find((t: any) => t.profile?.id === profile?.id);
+    const teacherId = currentTeacher?.id;
+
+    // Fetch real data with teacherId filter
     const { students: rawStudents, isLoading, error, refetch } = useStudents({
         search: searchQuery || undefined,
+        teacherId,
     });
-    const { courses: rawCourses } = useCourses();
+    const { courses: rawCourses } = useCourses({ teacherId });
 
     // Transform courses for filter dropdown
     const courses = [

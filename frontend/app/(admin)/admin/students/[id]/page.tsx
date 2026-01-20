@@ -21,9 +21,16 @@ import {
     Play,
     FileText,
     Award,
-    Loader2
+    Loader2,
+    Plus,
+    Lock,
+    Eye,
+    EyeOff,
+    Copy,
+    Check
 } from 'lucide-react';
 import { useStudents } from '@/hooks/useStudents';
+import EnrollStudentModal from '@/app/components/admin/EnrollStudentModal';
 
 const levelColors = {
     primary: 'bg-emerald-50 text-emerald-600 border-emerald-200',
@@ -35,11 +42,39 @@ const levelColors = {
 export default function StudentProfilePage() {
     const params = useParams();
     const studentId = params.id as string;
-    const { getStudent } = useStudents();
+    const { getStudent, getStudentCredentials } = useStudents();
 
     const [student, setStudent] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [isEnrollModalOpen, setIsEnrollModalOpen] = useState(false);
+    const [credentials, setCredentials] = useState<{ email: string, tempPassword: string | null } | null>(null);
+    const [showPassword, setShowPassword] = useState(false);
+    const [isLoadingCredentials, setIsLoadingCredentials] = useState(false);
+    const [copiedPassword, setCopiedPassword] = useState(false);
+
+    const handleFetchCredentials = async () => {
+        if (credentials) {
+            setShowPassword(!showPassword);
+            return;
+        }
+
+        setIsLoadingCredentials(true);
+        const { data, error } = await getStudentCredentials(student.user_id);
+        if (data) {
+            setCredentials(data);
+            setShowPassword(true);
+        }
+        setIsLoadingCredentials(false);
+    };
+
+    const copyPassword = () => {
+        if (credentials?.tempPassword) {
+            navigator.clipboard.writeText(credentials.tempPassword);
+            setCopiedPassword(true);
+            setTimeout(() => setCopiedPassword(false), 2000);
+        }
+    };
 
     useEffect(() => {
         const fetchStudentData = async () => {
@@ -176,6 +211,15 @@ export default function StudentProfilePage() {
                                     <motion.button
                                         whileHover={{ scale: 1.05 }}
                                         whileTap={{ scale: 0.95 }}
+                                        onClick={() => setIsEnrollModalOpen(true)}
+                                        className="flex items-center gap-2 px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-xl font-medium shadow-lg transition-colors"
+                                    >
+                                        <Plus className="w-4 h-4" />
+                                        Enroll in Course
+                                    </motion.button>
+                                    <motion.button
+                                        whileHover={{ scale: 1.05 }}
+                                        whileTap={{ scale: 0.95 }}
                                         className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-medium shadow-lg transition-colors"
                                     >
                                         <Edit className="w-4 h-4" />
@@ -215,6 +259,35 @@ export default function StudentProfilePage() {
                             <div>
                                 <p className="text-xs text-gray-500">Parent Phone</p>
                                 <p className="font-medium text-gray-900">{student.parent_phone || 'N/A'}</p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center">
+                                <Lock className="w-5 h-5 text-amber-500" />
+                            </div>
+                            <div className="flex-1">
+                                <p className="text-xs text-gray-500">Initial Password</p>
+                                <div className="flex items-center gap-2">
+                                    {showPassword && credentials?.tempPassword ? (
+                                        <div className="flex items-center gap-2">
+                                            <span className="font-mono font-medium text-gray-900 bg-gray-100 px-2 py-0.5 rounded">
+                                                {credentials.tempPassword}
+                                            </span>
+                                            <button onClick={copyPassword} className="p-1 hover:bg-gray-100 rounded">
+                                                {copiedPassword ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3 text-gray-400" />}
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <span className="font-medium text-gray-400">••••••••</span>
+                                    )}
+                                    <button
+                                        onClick={handleFetchCredentials}
+                                        disabled={isLoadingCredentials}
+                                        className="text-emerald-500 hover:text-emerald-600 text-sm font-medium ml-2"
+                                    >
+                                        {isLoadingCredentials ? <Loader2 className="w-3 h-3 animate-spin" /> : showPassword ? 'Hide' : 'Show'}
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -339,6 +412,20 @@ export default function StudentProfilePage() {
                     </div>
                 </motion.div>
             </div>
+
+            {/* Enroll Student Modal */}
+            <EnrollStudentModal
+                isOpen={isEnrollModalOpen}
+                onClose={() => setIsEnrollModalOpen(false)}
+                studentId={studentId}
+                studentName={student.profile?.full_name}
+                onSuccess={() => {
+                    // Refresh student data to show new enrollment
+                    getStudent(studentId).then(({ data }) => {
+                        if (data) setStudent(data);
+                    });
+                }}
+            />
         </div>
     );
 }

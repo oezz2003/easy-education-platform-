@@ -18,20 +18,53 @@ import {
     Play,
     Clock,
     DollarSign,
-    Loader2
+    Loader2,
+    Lock,
+    Eye,
+    EyeOff,
+    Copy,
+    Check
 } from 'lucide-react';
 import { useTeachers } from '@/hooks/useTeachers';
 import { useEffect, useState, useCallback } from 'react';
 import EditTeacherModal from '@/app/components/admin/EditTeacherModal';
+import TeacherCalendar from '@/app/components/admin/TeacherCalendar';
 
 export default function TeacherProfilePage() {
     const params = useParams();
     const teacherId = params.id as string;
-    const { getTeacher, updateTeacher } = useTeachers();
+    const { getTeacher, updateTeacher, getTeacherCredentials } = useTeachers();
     const [teacher, setTeacher] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [credentials, setCredentials] = useState<{ email: string, tempPassword: string | null } | null>(null);
+    const [showPassword, setShowPassword] = useState(false);
+    const [isLoadingCredentials, setIsLoadingCredentials] = useState(false);
+    const [copiedPassword, setCopiedPassword] = useState(false);
+
+    const handleFetchCredentials = async () => {
+        if (credentials) {
+            setShowPassword(!showPassword);
+            return;
+        }
+
+        setIsLoadingCredentials(true);
+        const { data, error } = await getTeacherCredentials(teacher.user_id);
+        if (data) {
+            setCredentials(data);
+            setShowPassword(true);
+        }
+        setIsLoadingCredentials(false);
+    };
+
+    const copyPassword = () => {
+        if (credentials?.tempPassword) {
+            navigator.clipboard.writeText(credentials.tempPassword);
+            setCopiedPassword(true);
+            setTimeout(() => setCopiedPassword(false), 2000);
+        }
+    };
 
     const fetchTeacher = useCallback(async () => {
         setIsLoading(true);
@@ -219,6 +252,35 @@ export default function TeacherProfilePage() {
                                 </p>
                             </div>
                         </div>
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center">
+                                <Lock className="w-5 h-5 text-amber-500" />
+                            </div>
+                            <div className="flex-1">
+                                <p className="text-xs text-gray-500">Initial Password</p>
+                                <div className="flex items-center gap-2">
+                                    {showPassword && credentials?.tempPassword ? (
+                                        <div className="flex items-center gap-2">
+                                            <span className="font-mono font-medium text-gray-900 bg-gray-100 px-2 py-0.5 rounded">
+                                                {credentials.tempPassword}
+                                            </span>
+                                            <button onClick={copyPassword} className="p-1 hover:bg-gray-100 rounded">
+                                                {copiedPassword ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3 text-gray-400" />}
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <span className="font-medium text-gray-400">••••••••</span>
+                                    )}
+                                    <button
+                                        onClick={handleFetchCredentials}
+                                        disabled={isLoadingCredentials}
+                                        className="text-blue-500 hover:text-blue-600 text-sm font-medium ml-2"
+                                    >
+                                        {isLoadingCredentials ? <Loader2 className="w-3 h-3 animate-spin" /> : showPassword ? 'Hide' : 'Show'}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </motion.div>
@@ -268,6 +330,17 @@ export default function TeacherProfilePage() {
                     </motion.div>
                 ))}
             </div>
+
+            {/* Teacher Calendar */}
+            <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.15 }}
+                className="space-y-4"
+            >
+                <h2 className="text-xl font-bold text-gray-900">Schedule</h2>
+                <TeacherCalendar teacherId={teacherId} />
+            </motion.div>
 
             {/* Main Content Grid */}
             <div className="grid lg:grid-cols-3 gap-6">

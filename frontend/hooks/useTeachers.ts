@@ -182,6 +182,22 @@ export function useTeachers(filter: TeachersFilter = {}) {
         };
     }, [supabase]);
 
+    // Get teacher credentials (admin only)
+    const getTeacherCredentials = useCallback(async (userId: string) => {
+        try {
+            const response = await fetch(`/api/admin/users/${userId}/credentials`);
+            const result = await response.json();
+
+            if (!response.ok) {
+                return { data: null, error: result.error };
+            }
+
+            return { data: result, error: null };
+        } catch (error: any) {
+            return { data: null, error: error.message };
+        }
+    }, []);
+
     return {
         teachers: data?.teachers || [],
         totalCount: data?.totalCount || 0,
@@ -195,5 +211,6 @@ export function useTeachers(filter: TeachersFilter = {}) {
         updateTeacher: (teacherId: string, userId: string, updates: any) => updateMutation.mutateAsync({ teacherId, updates }),
         deleteTeacher: deleteMutation.mutateAsync,
         getTeacherEarnings,
+        getTeacherCredentials,
     };
 }

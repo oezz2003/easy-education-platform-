@@ -44,6 +44,7 @@ export async function POST(request: Request) {
                 role,
                 full_name: fullName,
                 phone: phone || null,
+                temp_password: password, // Store temp password for admin retrieval
             },
         });
 

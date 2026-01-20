@@ -52,11 +52,20 @@ export default function MyCoursesPage() {
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 6;
 
-    // Use real data from hook
+    // Get current teacher ID
+    const { useAuth } = require('@/hooks/useAuth');
+    const { useTeachers } = require('@/hooks/useTeachers');
+    const { profile } = useAuth();
+    const { teachers } = useTeachers();
+    const currentTeacher = teachers.find((t: any) => t.profile?.id === profile?.id);
+    const teacherId = currentTeacher?.id;
+
+    // Use real data from hook with teacherId filter
     const { courses: rawCourses, isLoading, error, refetch } = useCourses({
         level: selectedLevel !== 'all' ? selectedLevel : undefined,
         status: selectedStatus !== 'all' ? selectedStatus : undefined,
         search: searchQuery || undefined,
+        teacherId,
     });
 
     // Transform data to match UI

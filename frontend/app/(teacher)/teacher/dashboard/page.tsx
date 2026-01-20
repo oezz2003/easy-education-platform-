@@ -7,16 +7,24 @@ import { useAuth } from '@/hooks/useAuth';
 import { useSessions } from '@/hooks/useSessions';
 import { useCourses } from '@/hooks/useCourses';
 import { useBatches } from '@/hooks/useBatches';
+import { useTeachers } from '@/hooks/useTeachers';
 
 export default function TeacherDashboard() {
     const { profile } = useAuth();
-    const { sessions, isLoading: sessionsLoading } = useSessions();
-    const { courses, isLoading: coursesLoading } = useCourses();
-    const { batches } = useBatches();
+    const { teachers } = useTeachers();
+
+    // Find current teacher profile
+    const currentTeacher = teachers.find(t => t.profile?.id === profile?.id);
+    const teacherId = currentTeacher?.id;
+
+    // Use teacherId for scoped data fetching
+    const { sessions, isLoading: sessionsLoading } = useSessions({ teacherId });
+    const { courses, isLoading: coursesLoading } = useCourses({ teacherId });
+    const { batches } = useBatches({ teacherId });
 
     const isLoading = sessionsLoading || coursesLoading;
 
-    // Calculate stats from real data
+    // Calculate stats from real data (already scoped by teacherId)
     const totalStudents = batches.length; // Simplified - would need enrollments query for accurate count
     const todaySessions = sessions.filter(s => {
         const today = new Date().toISOString().split('T')[0];

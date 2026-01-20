@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     DollarSign,
@@ -33,29 +33,47 @@ import { useSalaries } from '@/hooks/useSalaries';
 import { useTeachers } from '@/hooks/useTeachers';
 import { useStudents } from '@/hooks/useStudents';
 import { useCourses } from '@/hooks/useCourses';
+import { useTeacherStats } from '@/hooks/useTeacherStats';
+import { UserAvatar } from '@/app/components/shared/UserAvatar';
 
 const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
 export default function FinancePage() {
     const [activeTab, setActiveTab] = useState<'transactions' | 'salaries'>('transactions');
+    const [salarySubView, setSalarySubView] = useState<'records' | 'teachers'>('records');
     const [selectedMonth, setSelectedMonth] = useState(0); // January
     const [selectedYear, setSelectedYear] = useState(2026);
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
     const [showPaymentModal, setShowPaymentModal] = useState(false);
     const [showSalaryModal, setShowSalaryModal] = useState(false);
+    const [showCreateSalaryModal, setShowCreateSalaryModal] = useState(false);
     const [selectedItems, setSelectedItems] = useState<string[]>([]);
+
+    // Salary Creation State
+    const [salaryMode, setSalaryMode] = useState<'automatic' | 'manual'>('automatic');
+    const [selectedTeacherForSalary, setSelectedTeacherForSalary] = useState<any>(null);
+    const [salaryData, setSalaryData] = useState({
+        month: new Date().getMonth() + 1,
+        year: new Date().getFullYear(),
+        includeSessions: true,
+        includeCourses: true,
+        customAmount: '',
+        baseSalary: '',
+        notes: '',
+    });
 
     // Hooks for real data
     const { transactions: rawTransactions, isLoading: transactionsLoading, error: transactionsError, getStats, refetch: refetchTransactions } = useTransactions({
         status: statusFilter !== 'all' ? statusFilter as any : undefined,
         search: searchQuery || undefined,
     });
-    const { salaries: rawSalaries, isLoading: salariesLoading, refetch: refetchSalaries, generateSalary } = useSalaries();
+    const { salaries: rawSalaries, isLoading: salariesLoading, refetch: refetchSalaries, generateSalary, paySalary } = useSalaries();
     const { teachers: rawTeachers } = useTeachers();
     const { students } = useStudents();
     const { courses } = useCourses();
     const { createTransaction } = useTransactions();
+    const { stats: teacherStats, isLoading: statsLoading, fetchStats } = useTeacherStats();
 
     // Transform transactions to match UI
     const transactions = rawTransactions.map(t => ({
@@ -88,6 +106,13 @@ export default function FinancePage() {
             paidAt: s.paid_at,
         };
     });
+
+    // Fetch stats when Create Salary modal opens (MUST be before early returns)
+    useEffect(() => {
+        if (showCreateSalaryModal && selectedTeacherForSalary) {
+            fetchStats(selectedTeacherForSalary.id, salaryData.month, salaryData.year);
+        }
+    }, [showCreateSalaryModal, selectedTeacherForSalary, salaryData.month, salaryData.year, fetchStats]);
 
     // Loading state
     if (transactionsLoading || salariesLoading) {
@@ -149,6 +174,127 @@ export default function FinancePage() {
             } else {
                 setSelectedItems(pending.map(s => s.id));
             }
+        }
+    };
+
+    // Teacher list for "By Teacher" view
+    const teachersList = rawTeachers.map(t => {
+        const teacherSalaries = rawSalaries.filter(s => s.teacher_id === t.id);
+        const pendingAmount = teacherSalaries.filter(s => s.status === 'pending').reduce((sum, s) => sum + s.total_amount, 0);
+        const paidAmount = teacherSalaries.filter(s => s.status === 'paid').reduce((sum, s) => sum + s.total_amount, 0);
+
+        return {
+            id: t.id,
+            name: t.profile?.full_name || 'Unknown',
+            avatar: t.profile?.avatar_url,
+            subject: t.subject || 'General',
+            pendingAmount,
+            paidAmount,
+            status: pendingAmount > 0 ? 'pending' : 'paid',
+        };
+    }).filter(t =>
+        t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        t.subject.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
+
+
+    // Calculate Total for Create Salary Modal
+    const calculateTotal = () => {
+        let total = 0;
+        if (salaryMode === 'automatic' && teacherStats) {
+            if (salaryData.includeSessions) total += teacherStats.sessions.total;
+            if (salaryData.includeCourses) total += teacherStats.courses.total;
+        } else if (salaryMode === 'manual' && salaryData.baseSalary) {
+            total += parseFloat(salaryData.baseSalary);
+        }
+        if (salaryData.customAmount) total += parseFloat(salaryData.customAmount);
+        return total;
+    };
+
+    // Handle Create Salary
+    const handleCreateSalaryFromFinance = async () => {
+        if (!selectedTeacherForSalary) return;
+
+        const total = calculateTotal();
+        const items: any[] = [];
+
+        if (salaryMode === 'automatic' && teacherStats) {
+            if (salaryData.includeSessions) {
+                items.push(...teacherStats.sessions.items.map((i: any) => ({
+                    description: `Session: ${i.title}`,
+                    type: 'session',
+                    amount: i.amount,
+                    session_id: i.id
+                })));
+            }
+            if (salaryData.includeCourses) {
+                items.push(...teacherStats.courses.items.map((i: any) => ({
+                    description: `Course Revenue: ${i.title}`,
+                    type: 'course_revenue',
+                    amount: i.amount,
+                })));
+            }
+        } else if (salaryMode === 'manual' && salaryData.baseSalary) {
+            items.push({
+                description: 'Base Salary (Manual Entry)',
+                type: 'base',
+                amount: parseFloat(salaryData.baseSalary),
+            });
+        }
+
+        if (salaryData.customAmount) {
+            items.push({
+                description: salaryData.notes || 'Manual Adjustment',
+                type: 'bonus',
+                amount: parseFloat(salaryData.customAmount),
+            });
+        }
+
+        try {
+            const response = await fetch('/api/admin/finance', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'create_salary',
+                    teacher_id: selectedTeacherForSalary.id,
+                    month: salaryData.month,
+                    year: salaryData.year,
+                    session_earnings: salaryMode === 'automatic' ? (teacherStats?.sessions.total || 0) : 0,
+                    sessions_count: salaryMode === 'automatic' ? (teacherStats?.sessions.count || 0) : 0,
+                    base_salary: salaryMode === 'manual' ? parseFloat(salaryData.baseSalary) || 0 : 0,
+                    total_amount: total,
+                    items,
+                    notes: salaryData.notes
+                }),
+            });
+
+            if (!response.ok) throw new Error('Failed to create salary');
+
+            setShowCreateSalaryModal(false);
+            setSelectedTeacherForSalary(null);
+            setSalaryMode('automatic');
+            setSalaryData({
+                month: new Date().getMonth() + 1,
+                year: new Date().getFullYear(),
+                includeSessions: true,
+                includeCourses: true,
+                customAmount: '',
+                baseSalary: '',
+                notes: '',
+            });
+            refetchSalaries();
+        } catch (err) {
+            console.error(err);
+            alert('Failed to create salary record');
+        }
+    };
+
+    // Handle Pay Salary
+    const handlePaySalaryFromFinance = async (id: string) => {
+        if (confirm('Are you sure you want to mark this salary as PAID?')) {
+            await paySalary(id, 'Bank Transfer', 'Manual');
+            refetchSalaries();
         }
     };
 
@@ -280,9 +426,24 @@ export default function FinancePage() {
                         </button>
                     </div>
 
-                    {/* Month/Year Selector for Salaries */}
+                    {/* Month/Year Selector and Sub-view Toggle for Salaries */}
                     {activeTab === 'salaries' && (
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-4">
+                            {/* Sub-view Toggle */}
+                            <div className="flex bg-gray-100 rounded-lg p-0.5">
+                                <button
+                                    onClick={() => setSalarySubView('records')}
+                                    className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${salarySubView === 'records' ? 'bg-white shadow text-gray-900' : 'text-gray-600'}`}
+                                >
+                                    Records
+                                </button>
+                                <button
+                                    onClick={() => setSalarySubView('teachers')}
+                                    className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${salarySubView === 'teachers' ? 'bg-white shadow text-gray-900' : 'text-gray-600'}`}
+                                >
+                                    By Teacher
+                                </button>
+                            </div>
                             <select
                                 value={selectedMonth}
                                 onChange={(e) => setSelectedMonth(Number(e.target.value))}
@@ -443,98 +604,161 @@ export default function FinancePage() {
                                 animate={{ opacity: 1 }}
                                 exit={{ opacity: 0 }}
                             >
-                                <table className="w-full">
-                                    <thead>
-                                        <tr className="text-left text-sm text-gray-500">
-                                            <th className="pb-4 font-medium">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={selectedItems.length === filteredSalaries.filter(s => s.status === 'pending').length && selectedItems.length > 0}
-                                                    onChange={toggleSelectAll}
-                                                    className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
-                                                />
-                                            </th>
-                                            <th className="pb-4 font-medium">Teacher</th>
-                                            <th className="pb-4 font-medium">Sessions</th>
-                                            <th className="pb-4 font-medium">Earnings</th>
-                                            <th className="pb-4 font-medium">Bonus</th>
-                                            <th className="pb-4 font-medium">Deductions</th>
-                                            <th className="pb-4 font-medium">Total</th>
-                                            <th className="pb-4 font-medium">Status</th>
-                                            <th className="pb-4 font-medium">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-100">
-                                        {filteredSalaries.map((salary) => (
-                                            <tr key={salary.id} className="group hover:bg-gray-50">
-                                                <td className="py-4">
-                                                    {salary.status === 'pending' && (
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={selectedItems.includes(salary.id)}
-                                                            onChange={() => toggleSelectItem(salary.id)}
-                                                            className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
-                                                        />
-                                                    )}
-                                                </td>
-                                                <td className="py-4">
-                                                    <div className="flex items-center gap-3">
-                                                        <img src={salary.teacherAvatar} alt="" className="w-10 h-10 rounded-xl" />
-                                                        <div>
-                                                            <p className="font-medium text-gray-900">{salary.teacher}</p>
-                                                            <p className="text-sm text-gray-500">{salary.subject}</p>
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                                <td className="py-4">
-                                                    <span className="inline-flex items-center px-2.5 py-1 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium">
-                                                        {salary.sessions} sessions
-                                                    </span>
-                                                </td>
-                                                <td className="py-4 font-medium text-gray-900">EGP {salary.sessionEarnings.toLocaleString()}</td>
-                                                <td className="py-4">
-                                                    {salary.bonus > 0 ? (
-                                                        <span className="text-emerald-600 font-medium">+EGP {salary.bonus}</span>
-                                                    ) : (
-                                                        <span className="text-gray-400">-</span>
-                                                    )}
-                                                </td>
-                                                <td className="py-4">
-                                                    {salary.deductions > 0 ? (
-                                                        <span className="text-red-600 font-medium">-EGP {salary.deductions}</span>
-                                                    ) : (
-                                                        <span className="text-gray-400">-</span>
-                                                    )}
-                                                </td>
-                                                <td className="py-4">
-                                                    <span className="font-bold text-gray-900">EGP {salary.total.toLocaleString()}</span>
-                                                </td>
-                                                <td className="py-4">
-                                                    <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium ${salary.status === 'paid' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
-                                                        }`}>
-                                                        {salary.status === 'paid' ? <Check className="w-3 h-3 mr-1" /> : <Clock className="w-3 h-3 mr-1" />}
-                                                        {salary.status}
-                                                    </span>
-                                                </td>
-                                                <td className="py-4">
-                                                    <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                        {salary.status === 'pending' && (
-                                                            <button className="px-3 py-1.5 bg-emerald-500 text-white rounded-lg text-sm hover:bg-emerald-600">
-                                                                Pay Now
-                                                            </button>
-                                                        )}
-                                                        <button className="p-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200">
-                                                            <Eye className="w-4 h-4" />
-                                                        </button>
-                                                        <button className="p-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200">
-                                                            <MoreVertical className="w-4 h-4" />
-                                                        </button>
-                                                    </div>
-                                                </td>
+                                {/* Records Sub-view */}
+                                {salarySubView === 'records' && (
+                                    <table className="w-full">
+                                        <thead>
+                                            <tr className="text-left text-sm text-gray-500">
+                                                <th className="pb-4 font-medium">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={selectedItems.length === filteredSalaries.filter(s => s.status === 'pending').length && selectedItems.length > 0}
+                                                        onChange={toggleSelectAll}
+                                                        className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                                                    />
+                                                </th>
+                                                <th className="pb-4 font-medium">Teacher</th>
+                                                <th className="pb-4 font-medium">Sessions</th>
+                                                <th className="pb-4 font-medium">Earnings</th>
+                                                <th className="pb-4 font-medium">Bonus</th>
+                                                <th className="pb-4 font-medium">Deductions</th>
+                                                <th className="pb-4 font-medium">Total</th>
+                                                <th className="pb-4 font-medium">Status</th>
+                                                <th className="pb-4 font-medium">Actions</th>
                                             </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-100">
+                                            {filteredSalaries.map((salary) => (
+                                                <tr key={salary.id} className="group hover:bg-gray-50">
+                                                    <td className="py-4">
+                                                        {salary.status === 'pending' && (
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={selectedItems.includes(salary.id)}
+                                                                onChange={() => toggleSelectItem(salary.id)}
+                                                                className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                                                            />
+                                                        )}
+                                                    </td>
+                                                    <td className="py-4">
+                                                        <div className="flex items-center gap-3">
+                                                            <img src={salary.teacherAvatar} alt="" className="w-10 h-10 rounded-xl" />
+                                                            <div>
+                                                                <p className="font-medium text-gray-900">{salary.teacher}</p>
+                                                                <p className="text-sm text-gray-500">{salary.subject}</p>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td className="py-4">
+                                                        <span className="inline-flex items-center px-2.5 py-1 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium">
+                                                            {salary.sessions} sessions
+                                                        </span>
+                                                    </td>
+                                                    <td className="py-4 font-medium text-gray-900">EGP {salary.sessionEarnings.toLocaleString()}</td>
+                                                    <td className="py-4">
+                                                        {salary.bonus > 0 ? (
+                                                            <span className="text-emerald-600 font-medium">+EGP {salary.bonus}</span>
+                                                        ) : (
+                                                            <span className="text-gray-400">-</span>
+                                                        )}
+                                                    </td>
+                                                    <td className="py-4">
+                                                        {salary.deductions > 0 ? (
+                                                            <span className="text-red-600 font-medium">-EGP {salary.deductions}</span>
+                                                        ) : (
+                                                            <span className="text-gray-400">-</span>
+                                                        )}
+                                                    </td>
+                                                    <td className="py-4">
+                                                        <span className="font-bold text-gray-900">EGP {salary.total.toLocaleString()}</span>
+                                                    </td>
+                                                    <td className="py-4">
+                                                        <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium ${salary.status === 'paid' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+                                                            }`}>
+                                                            {salary.status === 'paid' ? <Check className="w-3 h-3 mr-1" /> : <Clock className="w-3 h-3 mr-1" />}
+                                                            {salary.status}
+                                                        </span>
+                                                    </td>
+                                                    <td className="py-4">
+                                                        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            {salary.status === 'pending' && (
+                                                                <button
+                                                                    onClick={() => handlePaySalaryFromFinance(salary.id)}
+                                                                    className="px-3 py-1.5 bg-emerald-500 text-white rounded-lg text-sm hover:bg-emerald-600"
+                                                                >
+                                                                    Pay Now
+                                                                </button>
+                                                            )}
+                                                            <button className="p-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200">
+                                                                <Eye className="w-4 h-4" />
+                                                            </button>
+                                                            <button className="p-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200">
+                                                                <MoreVertical className="w-4 h-4" />
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                )}
+
+                                {/* By Teacher Sub-view */}
+                                {salarySubView === 'teachers' && (
+                                    <table className="w-full">
+                                        <thead>
+                                            <tr className="text-left text-sm text-gray-500">
+                                                <th className="pb-4 font-medium">Teacher</th>
+                                                <th className="pb-4 font-medium">Pending</th>
+                                                <th className="pb-4 font-medium">Paid (Total)</th>
+                                                <th className="pb-4 font-medium">Status</th>
+                                                <th className="pb-4 font-medium text-right">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-100">
+                                            {teachersList.map((teacher) => (
+                                                <tr key={teacher.id} className="group hover:bg-gray-50">
+                                                    <td className="py-4">
+                                                        <div className="flex items-center gap-3">
+                                                            <UserAvatar src={teacher.avatar} name={teacher.name} className="w-10 h-10 rounded-xl" />
+                                                            <div>
+                                                                <p className="font-medium text-gray-900">{teacher.name}</p>
+                                                                <p className="text-xs text-gray-500">{teacher.subject}</p>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td className="py-4">
+                                                        <p className={`font-semibold ${teacher.pendingAmount > 0 ? 'text-amber-600' : 'text-gray-400'}`}>
+                                                            EGP {teacher.pendingAmount.toLocaleString()}
+                                                        </p>
+                                                    </td>
+                                                    <td className="py-4">
+                                                        <p className="font-semibold text-gray-900">EGP {teacher.paidAmount.toLocaleString()}</p>
+                                                    </td>
+                                                    <td className="py-4">
+                                                        <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${teacher.status === 'pending' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                                                            {teacher.status === 'pending' ? 'Pending' : 'Paid'}
+                                                        </span>
+                                                    </td>
+                                                    <td className="py-4">
+                                                        <div className="flex items-center justify-end gap-2">
+                                                            <button
+                                                                onClick={() => {
+                                                                    setSelectedTeacherForSalary(teacher);
+                                                                    setShowCreateSalaryModal(true);
+                                                                }}
+                                                                className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-sm font-medium"
+                                                            >
+                                                                <Plus className="w-4 h-4" />
+                                                                Create Salary
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                )}
                             </motion.div>
                         )}
                     </AnimatePresence>
@@ -753,6 +977,178 @@ export default function FinancePage() {
                                 >
                                     Generate Salaries
                                 </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Create Salary Modal (From Payroll Page) */}
+            <AnimatePresence>
+                {showCreateSalaryModal && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+                        onClick={() => setShowCreateSalaryModal(false)}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.9, opacity: 0 }}
+                            className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <div className="p-6 space-y-6">
+                                <h2 className="text-xl font-bold text-gray-900">
+                                    Create Salary for {selectedTeacherForSalary?.name}
+                                </h2>
+
+                                {/* Period Selection */}
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">Month</label>
+                                        <select
+                                            value={salaryData.month}
+                                            onChange={(e) => setSalaryData({ ...salaryData, month: parseInt(e.target.value) })}
+                                            className="w-full px-4 py-2 rounded-xl border border-gray-200"
+                                        >
+                                            {months.map((month, idx) => (
+                                                <option key={month} value={idx + 1}>{month}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">Year</label>
+                                        <select
+                                            value={salaryData.year}
+                                            onChange={(e) => setSalaryData({ ...salaryData, year: parseInt(e.target.value) })}
+                                            className="w-full px-4 py-2 rounded-xl border border-gray-200"
+                                        >
+                                            <option value={2025}>2025</option>
+                                            <option value={2026}>2026</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                {/* Mode Toggle */}
+                                <div className="flex bg-gray-100 rounded-xl p-1">
+                                    <button
+                                        onClick={() => setSalaryMode('automatic')}
+                                        className={`flex-1 px-4 py-2 rounded-lg font-medium text-sm transition-all ${salaryMode === 'automatic' ? 'bg-white shadow text-gray-900' : 'text-gray-600'}`}
+                                    >
+                                        Automatic
+                                    </button>
+                                    <button
+                                        onClick={() => setSalaryMode('manual')}
+                                        className={`flex-1 px-4 py-2 rounded-lg font-medium text-sm transition-all ${salaryMode === 'manual' ? 'bg-white shadow text-gray-900' : 'text-gray-600'}`}
+                                    >
+                                        Manual
+                                    </button>
+                                </div>
+
+                                {/* Automatic Mode */}
+                                {salaryMode === 'automatic' && (
+                                    <>
+                                        {statsLoading ? (
+                                            <div className="flex justify-center py-4"><Loader2 className="animate-spin text-emerald-500" /></div>
+                                        ) : teacherStats ? (
+                                            <div className="p-4 bg-gray-50 rounded-xl border border-gray-100 space-y-3">
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-2">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={salaryData.includeSessions}
+                                                            onChange={(e) => setSalaryData({ ...salaryData, includeSessions: e.target.checked })}
+                                                            className="rounded text-emerald-500"
+                                                        />
+                                                        <span className="font-medium text-gray-900">Live Sessions ({teacherStats.sessions.count})</span>
+                                                    </div>
+                                                    <span className="font-semibold text-gray-900">EGP {teacherStats.sessions.total.toLocaleString()}</span>
+                                                </div>
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-2">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={salaryData.includeCourses}
+                                                            onChange={(e) => setSalaryData({ ...salaryData, includeCourses: e.target.checked })}
+                                                            className="rounded text-emerald-500"
+                                                        />
+                                                        <span className="font-medium text-gray-900">Course Revenue ({teacherStats.courses.count})</span>
+                                                    </div>
+                                                    <span className="font-semibold text-gray-900">EGP {teacherStats.courses.total.toLocaleString()}</span>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <p className="text-center text-gray-500">No activity found for this period.</p>
+                                        )}
+                                    </>
+                                )}
+
+                                {/* Manual Mode */}
+                                {salaryMode === 'manual' && (
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">Base Salary Amount</label>
+                                        <div className="relative">
+                                            <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                                            <input
+                                                type="number"
+                                                value={salaryData.baseSalary}
+                                                onChange={(e) => setSalaryData({ ...salaryData, baseSalary: e.target.value })}
+                                                placeholder="Enter fixed salary amount"
+                                                className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-400"
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Manual Adjustment (Both Modes) */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Adjustment / Bonus (Optional)</label>
+                                    <input
+                                        type="number"
+                                        value={salaryData.customAmount}
+                                        onChange={(e) => setSalaryData({ ...salaryData, customAmount: e.target.value })}
+                                        placeholder="0"
+                                        className="w-full px-4 py-2 rounded-xl border border-gray-200"
+                                    />
+                                </div>
+
+                                {/* Notes */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Notes</label>
+                                    <textarea
+                                        value={salaryData.notes}
+                                        onChange={(e) => setSalaryData({ ...salaryData, notes: e.target.value })}
+                                        placeholder="Add notes for this salary record..."
+                                        rows={2}
+                                        className="w-full px-4 py-2 rounded-xl border border-gray-200 resize-none"
+                                    />
+                                </div>
+
+                                {/* Total */}
+                                <div className="bg-emerald-50 rounded-xl p-4 flex items-center justify-between">
+                                    <span className="font-medium text-emerald-800">Total Payable</span>
+                                    <span className="text-2xl font-bold text-emerald-700">EGP {calculateTotal().toLocaleString()}</span>
+                                </div>
+
+                                {/* Actions */}
+                                <div className="flex items-center justify-end gap-3 pt-4 border-t">
+                                    <button
+                                        onClick={() => setShowCreateSalaryModal(false)}
+                                        className="px-4 py-2 text-gray-600 hover:text-gray-800"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={handleCreateSalaryFromFinance}
+                                        disabled={calculateTotal() <= 0}
+                                        className="px-6 py-2 bg-emerald-500 text-white rounded-xl hover:bg-emerald-600 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        Create Salary
+                                    </button>
+                                </div>
                             </div>
                         </motion.div>
                     </motion.div>
